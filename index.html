@@ -3,40 +3,48 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>ICAI NCE Financial Statement Converter — M S Joshi &amp; Co</title>
+<title>ICAI NCE Financial Statement Converter — M S Joshi &amp; Co.</title>
 <style>
-:root{--navy:#1f3a5f;--navy2:#274b78;--blue:#1f6fe0;--blue2:#0b57d0;--green:#1c8a5a;--orange:#e8662a;--ink:#1c2430;--muted:#64707e;--line:#e2e8f0;--bg:#eef1f6;--card:#fff;--dark:#1f2430;}
-*{box-sizing:border-box;font-family:"Segoe UI",Calibri,Arial,sans-serif;}
+:root{--navy:#1f2f63;--navy2:#27407a;--blue:#1f6fe0;--blue2:#0b57d0;--green:#1c8a5a;--teal:#0f8a9b;--orange:#e8662a;--ink:#1c2430;--muted:#64707e;--line:#e2e8f0;--bg:#eaf2f8;--card:#fff;--dark:#1f2430;}
+*{box-sizing:border-box;font-family:"Nunito","Segoe UI",Calibri,Arial,sans-serif;}
 body{margin:0;background:var(--bg);color:var(--ink);}
-a{color:var(--orange);text-decoration:none;}
-.topbar{background:#fff;display:flex;align-items:center;justify-content:space-between;padding:14px 26px;border-bottom:1px solid var(--line);}
-.brand{display:flex;align-items:center;gap:12px;}
-.brand .logo{width:34px;height:40px;color:var(--blue);}
-.brand h1{margin:0;font-size:20px;font-weight:800;color:#16263b;}
-.brand p{margin:0;font-size:12px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
-.btn-ghost{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;font-size:13px;color:#444;cursor:pointer;}
-.banner{background:linear-gradient(180deg,var(--navy2),var(--navy));border-top:3px solid var(--orange);border-bottom:3px solid var(--orange);color:#fff;text-align:center;padding:16px 10px;}
+a{color:var(--teal);text-decoration:none;}
+.topbar{background:#fff;text-align:center;padding:20px 20px 14px;border-bottom:1px solid var(--line);border-top:4px solid var(--orange);}
+.logo{max-height:86px;max-width:90%;}
+.logo-fallback{display:none;}
+.logo-fallback h1{margin:0;font-size:30px;font-weight:900;color:var(--navy);letter-spacing:1px;}
+.logo-fallback p{margin:2px 0 0;font-size:14px;font-weight:800;color:#7a7f5a;letter-spacing:3px;text-transform:uppercase;}
+.logo-fallback small{color:var(--muted);font-size:11px;}
+.badge{display:inline-block;margin-top:12px;background:linear-gradient(90deg,#0f8a9b,#1f6fe0);color:#fff;
+  font-weight:800;font-size:12px;letter-spacing:1px;padding:7px 18px;border-radius:20px;text-transform:uppercase;}
+.banner{background:linear-gradient(180deg,var(--navy2),var(--navy));color:#fff;text-align:center;padding:18px 10px;
+  max-width:1120px;margin:18px auto 0;border-radius:12px;}
 .banner h2{margin:0;font-size:22px;font-weight:800;}
-.banner p{margin:4px 0 0;font-size:13px;opacity:.8;}
-main{max-width:1120px;margin:22px auto;padding:0 18px 70px;}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:20px;overflow:hidden;box-shadow:0 1px 2px rgba(20,30,50,.04);}
-.card-head{background:var(--dark);color:#fff;padding:13px 20px;font-weight:700;font-size:15px;}
+.banner p{margin:5px 0 0;font-size:13px;opacity:.82;}
+main{max-width:1120px;margin:18px auto;padding:0 18px 60px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:20px;overflow:hidden;box-shadow:0 2px 6px rgba(20,40,80,.05);}
+.card.accent{border-left:5px solid var(--orange);}
+.card-head{background:var(--navy);color:#fff;padding:13px 20px;font-weight:800;font-size:15px;display:flex;align-items:center;gap:10px;}
+.pill{background:var(--blue2);color:#fff;border-radius:14px;font-size:12px;font-weight:800;padding:3px 12px;letter-spacing:.5px;}
 .card-body{padding:20px 22px;}
 .sub{color:var(--muted);font-size:14px;margin:0 0 16px;}
+.contact-row{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;}
+.contact-row .l{flex:1;min-width:240px;} .contact-row .r{font-size:13.5px;line-height:1.7;min-width:260px;}
+.contact-row .r b{color:var(--navy);}
 .choices{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
-.choice{border:2px solid var(--line);border-radius:12px;padding:26px;text-align:center;cursor:pointer;transition:.15s;background:#fff;}
+.choice{border:2px solid var(--line);border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:.15s;background:#fbfdff;position:relative;}
 .choice:hover{border-color:#b8c6db;}
-.choice.sel{border-color:var(--blue2);background:#f3f8ff;box-shadow:0 0 0 3px rgba(31,111,224,.12);}
+.choice.sel{border-color:var(--navy);background:#eef3fb;box-shadow:0 0 0 3px rgba(31,47,99,.10);}
+.choice.sel:after{content:"\2713";position:absolute;top:12px;right:14px;width:22px;height:22px;border-radius:50%;background:var(--navy);color:#fff;font-size:13px;line-height:22px;}
 .choice .ic{font-size:30px;margin-bottom:10px;}
-.choice.prop .ic{color:var(--orange);}.choice.part .ic{color:var(--blue2);}
-.choice h3{margin:0 0 4px;font-size:18px;}
+.choice h3{margin:0 0 4px;font-size:18px;color:var(--navy);}
 .choice small{color:var(--muted);}
-.collap-head{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:16px 20px;font-weight:700;}
+.collap-head{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:16px 20px;font-weight:800;color:var(--navy);}
 .collap-body{padding:0 20px 20px;display:none;}
 .collap.open .collap-body{display:block;}
 .collap.open .chev{transform:rotate(180deg);}
 .chev{transition:.2s;color:var(--muted);}
-label.fl{display:block;font-size:13px;font-weight:700;margin:0 0 6px;color:#28323e;}
+label.fl{display:block;font-size:13px;font-weight:800;margin:0 0 6px;color:#28323e;}
 .grid3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;}
 .grid2{display:grid;grid-template-columns:1fr 2fr;gap:14px;margin-top:14px;}
 input[type=text],select,textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px;background:#fff;}
@@ -44,66 +52,87 @@ textarea{min-height:46px;resize:vertical;}
 .single{display:flex;align-items:center;gap:8px;margin:4px 2px 18px;font-size:14px;color:#36414e;}
 .zones{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
 .zone{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;}
-.zone .zh{color:#fff;padding:11px 16px;font-weight:700;font-size:14px;}
+.zone .zh{color:#fff;padding:11px 16px;font-weight:800;font-size:14px;}
 .zone.cy .zh{background:var(--blue);}.zone.py .zh{background:var(--green);}
-.drop{margin:16px;border:2px dashed #ccd6e4;border-radius:10px;padding:28px 14px;text-align:center;}
+.drop{margin:16px;border:2px dashed #ccd6e4;border-radius:10px;padding:26px 14px;text-align:center;}
 .drop.cy .cloud{color:var(--blue);}.drop.py .cloud{color:var(--green);}
-.drop .cloud{font-size:40px;}
+.drop .cloud{font-size:38px;}
 .drop b{display:block;margin:10px 0 4px;font-size:16px;}
 .drop small{color:var(--muted);}
 .browse{margin-top:12px;border:1px solid;border-radius:8px;background:#fff;padding:8px 16px;cursor:pointer;font-size:14px;}
 .drop.cy .browse{color:var(--blue);border-color:var(--blue);}
 .drop.py .browse{color:var(--green);border-color:var(--green);}
-.fname{margin-top:10px;font-size:13px;color:#2b6a3f;font-weight:600;word-break:break-all;}
+.fname{margin-top:10px;font-size:13px;color:#2b6a3f;font-weight:700;word-break:break-all;}
 .zone.single-hide{opacity:.5;pointer-events:none;}
 .convert-wrap{text-align:center;margin:24px 0 8px;}
-.convert{background:linear-gradient(180deg,#3b7de0,#1f6fe0);color:#fff;border:none;border-radius:10px;padding:15px 34px;font-size:17px;font-weight:800;cursor:pointer;box-shadow:0 6px 16px rgba(31,111,224,.3);}
-.convert:disabled{background:#9fb4d4;box-shadow:none;cursor:default;}
+.convert{background:linear-gradient(180deg,#ef7a32,#e0561a);color:#fff;border:none;border-radius:12px;padding:16px 40px;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 8px 18px rgba(224,86,26,.32);width:100%;max-width:760px;}
+.convert:disabled{background:#cbb3a4;box-shadow:none;cursor:default;}
 #status{text-align:center;font-size:14px;margin:14px 0;min-height:20px;}
-.ok{color:#1a7f37;font-weight:600;}.err{color:#c0392b;font-weight:600;}
-.spinner{display:inline-block;width:15px;height:15px;border:2px solid #cdd;border-top-color:var(--blue);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:7px;}
+.ok{color:#1a7f37;font-weight:700;}.err{color:#c0392b;font-weight:700;}
+.spinner{display:inline-block;width:15px;height:15px;border:2px solid #cdd;border-top-color:var(--orange);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:7px;}
 @keyframes sp{to{transform:rotate(360deg)}}
 .howto li{margin:5px 0;font-size:14px;color:#33414f;}
-details.review summary{cursor:pointer;color:var(--blue2);font-weight:600;font-size:13px;}
+details.review summary{cursor:pointer;color:var(--blue2);font-weight:700;font-size:13px;}
 details.review textarea{margin-top:8px;min-height:240px;font-family:Consolas,monospace;font-size:12px;}
 .review-actions{margin-top:10px;}
-.btn-sm{border:1px solid var(--blue);color:var(--blue);background:#fff;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;font-weight:600;}
-footer{background:#161d2b;color:#c7cfdb;margin-top:30px;}
-.foot{max-width:1120px;margin:0 auto;padding:30px 22px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;}
-.foot h4{color:var(--orange);margin:0 0 12px;font-size:14px;}
-.foot div p{margin:4px 0;font-size:13px;}
-.foot a{color:var(--orange);}
-.copy{text-align:center;padding:14px;border-top:1px solid #2a3344;font-size:12px;color:#8a95a6;}
-.copy b{color:var(--orange);}
+.btn-sm{border:1px solid var(--blue);color:var(--blue);background:#fff;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;font-weight:700;}
+footer{background:#15203a;color:#cbd5e6;margin-top:30px;}
+.foot{max-width:1120px;margin:0 auto;padding:30px 22px;display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:26px;}
+.foot h4{color:var(--orange);margin:0 0 12px;font-size:13px;letter-spacing:1px;}
+.foot div p{margin:5px 0;font-size:13px;}
+.foot a{color:#7fd4e6;}
+.copy{text-align:center;padding:14px 16px;border-top:1px solid #243150;font-size:12px;color:#9aa6bd;line-height:1.7;}
+.copy b{color:#fff;}
 @media(max-width:780px){.choices,.zones,.grid3,.grid2,.foot{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
 <div class="topbar">
-  <div class="brand">
-    <svg class="logo" viewBox="0 0 24 28" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="24" rx="2"/><path d="M6 8h12M6 13h12M6 18h8"/></svg>
-    <div><h1>M S Joshi &amp; Co</h1><p>Chartered Accountants</p></div>
+  <img class="logo" src="/static/logo.png" alt="M S Joshi & Co." onerror="this.style.display='none';document.getElementById('lf').style.display='block';">
+  <div class="logo-fallback" id="lf">
+    <h1>M S JOSHI &amp; Co.</h1>
+    <p>Chartered Accountants</p>
+    <small>(Certified by Peer Review Board — ICAI)</small>
   </div>
-  <button class="btn-ghost" onclick="alert('M S Joshi & Co · FRN 0138082W · M.No 152333')">About</button>
+  <div><span class="badge">&#9889; ICAI NCE Converter</span></div>
 </div>
+
 <div class="banner">
   <h2>ICAI NCE Financial Statement Converter</h2>
   <p>T-Format to Schedule III — Fully Automated</p>
 </div>
+
 <main>
-  <div class="card">
-    <div class="card-head">Step 0 — Constitution Type</div>
+  <div class="card accent">
     <div class="card-body">
-      <p class="sub">Select the type of entity before uploading files</p>
-      <div class="choices">
-        <div class="choice prop sel" id="ch-prop" onclick="pickC('proprietorship')"><div class="ic">&#128100;</div><h3>Proprietorship Concern</h3><small>Single owner / Sole proprietor</small></div>
-        <div class="choice part" id="ch-part" onclick="pickC('partnership')"><div class="ic">&#128101;</div><h3>Partnership Firm</h3><small>Two or more partners</small></div>
+      <div class="contact-row">
+        <div class="l">
+          <p style="margin:0 0 6px;font-weight:800;color:var(--navy)">&#128276; Need help or access?</p>
+          <p class="sub" style="margin:0">Upload your two-year T-format statements and convert them to the ICAI NCE format in seconds. For assistance, contact us:</p>
+        </div>
+        <div class="r">
+          <b>M S Joshi &amp; Co., Chartered Accountants</b><br>
+          &#128222; +91 96240 94390 &nbsp;|&nbsp; &#127760; <a href="https://msjc.in" target="_blank">msjc.in</a><br>
+          &#9993; <a href="mailto:connect@msjc.in">connect@msjc.in</a> &nbsp;|&nbsp; <a href="mailto:msjoshiandco@gmail.com">msjoshiandco@gmail.com</a>
+        </div>
       </div>
     </div>
   </div>
+
+  <div class="card">
+    <div class="card-head"><span class="pill">STEP 1</span> &#127963;&#65039; Constitution Type</div>
+    <div class="card-body">
+      <p class="sub">Select the type of entity before uploading files</p>
+      <div class="choices">
+        <div class="choice prop sel" id="ch-prop" onclick="pickC('proprietorship')"><div class="ic">&#127978;</div><h3>Proprietorship</h3><small>Individual / Sole Proprietor</small></div>
+        <div class="choice part" id="ch-part" onclick="pickC('partnership')"><div class="ic">&#129309;</div><h3>Partnership</h3><small>Partnership Firm</small></div>
+      </div>
+    </div>
+  </div>
+
   <div class="card collap" id="clientCard">
     <div class="collap-head" onclick="document.getElementById('clientCard').classList.toggle('open')">
-      <span>Client Information <span style="color:var(--muted);font-weight:400">(optional)</span></span><span class="chev">&#9662;</span>
+      <span><span class="pill">STEP 2</span> &nbsp;&#128100; Client Details <span style="color:var(--muted);font-weight:400">(optional)</span></span><span class="chev">&#9662;</span>
     </div>
     <div class="collap-body">
       <div class="grid3">
@@ -117,31 +146,39 @@ footer{background:#161d2b;color:#c7cfdb;margin-top:30px;}
       </div>
     </div>
   </div>
-  <label class="single"><input type="checkbox" id="singleFile" onchange="toggleSingle()"> Both years are in a single file</label>
-  <div class="zones">
-    <div class="zone cy" id="zoneCY">
-      <div class="zh">Current Year (CY) File</div>
-      <div class="drop cy" id="dropCY">
-        <div class="cloud">&#9729;</div><b>Drop Current Year file here</b>
-        <small>Supported: Excel (.xlsx), Word (.docx), PDF (.pdf), image</small><br>
-        <button class="browse" onclick="document.getElementById('inCY').click()">Browse Files</button>
-        <div class="fname" id="nameCY"></div>
-        <input type="file" id="inCY" style="display:none" accept=".xlsx,.xls,.docx,.pdf,.png,.jpg,.jpeg" onchange="setName('CY')">
-      </div>
-    </div>
-    <div class="zone py" id="zonePY">
-      <div class="zh">Previous Year (PY) File</div>
-      <div class="drop py" id="dropPY">
-        <div class="cloud">&#9729;</div><b>Drop Previous Year file here</b>
-        <small>Supported: Excel (.xlsx), Word (.docx), PDF (.pdf), image</small><br>
-        <button class="browse" onclick="document.getElementById('inPY').click()">Browse Files</button>
-        <div class="fname" id="namePY"></div>
-        <input type="file" id="inPY" style="display:none" accept=".xlsx,.xls,.docx,.pdf,.png,.jpg,.jpeg" onchange="setName('PY')">
+
+  <div class="card">
+    <div class="card-head"><span class="pill">STEP 3</span> &#128228; Upload T-Format Statements</div>
+    <div class="card-body">
+      <label class="single"><input type="checkbox" id="singleFile" onchange="toggleSingle()"> Both years are in a single file</label>
+      <div class="zones">
+        <div class="zone cy" id="zoneCY">
+          <div class="zh">&#128197; Current Year (CY) File</div>
+          <div class="drop cy" id="dropCY">
+            <div class="cloud">&#9729;</div><b>Drop Current Year file here</b>
+            <small>Supported: Excel (.xlsx), Word (.docx), PDF (.pdf), image</small><br>
+            <button class="browse" onclick="document.getElementById('inCY').click()">Browse Files</button>
+            <div class="fname" id="nameCY"></div>
+            <input type="file" id="inCY" style="display:none" accept=".xlsx,.xls,.docx,.pdf,.png,.jpg,.jpeg" onchange="setName('CY')">
+          </div>
+        </div>
+        <div class="zone py" id="zonePY">
+          <div class="zh">&#128197; Previous Year (PY) File</div>
+          <div class="drop py" id="dropPY">
+            <div class="cloud">&#9729;</div><b>Drop Previous Year file here</b>
+            <small>Supported: Excel (.xlsx), Word (.docx), PDF (.pdf), image</small><br>
+            <button class="browse" onclick="document.getElementById('inPY').click()">Browse Files</button>
+            <div class="fname" id="namePY"></div>
+            <input type="file" id="inPY" style="display:none" accept=".xlsx,.xls,.docx,.pdf,.png,.jpg,.jpeg" onchange="setName('PY')">
+          </div>
+        </div>
       </div>
     </div>
   </div>
-  <div class="convert-wrap"><button class="convert" id="convertBtn" onclick="convert()">Convert to ICAI NCE Format</button></div>
+
+  <div class="convert-wrap"><button class="convert" id="convertBtn" onclick="convert()">&#8595; Convert to ICAI NCE Format — Download Excel</button></div>
   <div id="status"></div>
+
   <details class="review card" style="padding:14px 20px">
     <summary>Review / edit extracted data &amp; regenerate (advanced)</summary>
     <div style="padding-top:10px">
@@ -154,8 +191,9 @@ footer{background:#161d2b;color:#c7cfdb;margin-top:30px;}
       </div>
     </div>
   </details>
+
   <div class="card"><div class="card-body howto">
-    <p style="font-weight:700;margin:0 0 8px">How to use</p>
+    <p style="font-weight:800;margin:0 0 8px;color:var(--navy)">&#8505;&#65039; How to use</p>
     <ol style="margin:0;padding-left:20px">
       <li>Select the constitution type (Proprietorship or Partnership).</li>
       <li>Optionally fill in client details (entity name, PAN, GSTIN, etc.).</li>
@@ -166,13 +204,27 @@ footer{background:#161d2b;color:#c7cfdb;margin-top:30px;}
     </ol>
   </div></div>
 </main>
+
 <footer>
   <div class="foot">
-    <div><h4>CONTACT</h4><p><b>CA Mehulkumar S. Joshi</b></p><p>Membership No.: 152333</p><p>FRN: 0138082W</p></div>
-    <div><h4>ONLINE</h4><p>Email: <a href="mailto:msjoshiandco@gmail.com">msjoshiandco@gmail.com</a></p><p>Firm: M S Joshi &amp; Co</p></div>
-    <div><h4>OFFICE</h4><p>M S Joshi &amp; Co</p><p>Chartered Accountants</p><p>India</p></div>
+    <div><h4>CONTACT</h4>
+      <p><b style="color:#fff">M S Joshi &amp; Co.</b></p>
+      <p>Chartered Accountants</p>
+      <p>(Certified by Peer Review Board — ICAI)</p>
+      <p>&#128222; +91 96240 94390</p>
+    </div>
+    <div><h4>ONLINE</h4>
+      <p>&#127760; <a href="https://msjc.in" target="_blank">msjc.in</a></p>
+      <p>&#9993; <a href="mailto:connect@msjc.in">connect@msjc.in</a></p>
+      <p>&#9993; <a href="mailto:msjoshiandco@gmail.com">msjoshiandco@gmail.com</a></p>
+    </div>
+    <div><h4>OFFICE</h4>
+      <p>808-809, Avadh Kontina,</p>
+      <p>Canal Road Corner, Near C B Patel Club,</p>
+      <p>VIP Road, Surat – 395007</p>
+    </div>
   </div>
-  <div class="copy">Developed for <b>M S JOSHI &amp; CO</b> &nbsp;·&nbsp; &copy; 2026 M S Joshi &amp; Co, Chartered Accountants. All rights reserved.</div>
+  <div class="copy"><b>M S Joshi &amp; Co.</b> — Chartered Accountants (Certified by Peer Review Board — ICAI) &nbsp;&bull;&nbsp; 808-809, Avadh Kontina, Canal Road Corner, Near C B Patel Club, VIP Road, Surat – 395007 &nbsp;&bull;&nbsp; +91 96240 94390 &nbsp;&bull;&nbsp; msjc.in &nbsp;&bull;&nbsp; connect@msjc.in &nbsp;&bull;&nbsp; ICAI NCE Converter &nbsp;&bull;&nbsp; Powered by Claude AI</div>
 </footer>
 <script>
 var CONS='proprietorship';
