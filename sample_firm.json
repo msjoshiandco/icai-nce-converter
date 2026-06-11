@@ -1,0 +1,254 @@
+{
+  "entity": {
+    "name": "ARK Engineering",
+    "constitution": "partnership",
+    "cy_label": "31 March 2025",
+    "py_label": "31 March 2024",
+    "cy_fy": "2024-25",
+    "nature_of_business": "Manufacturing & job-work",
+    "nce_level": "IV",
+    "pan": "—",
+    "address": "—",
+    "gstin": "—",
+    "date_of_commencement": "—",
+    "ca_firm": "M S Joshi & Co",
+    "frn": "0138082W",
+    "ca_partner": "CA Mehulkumar S. Joshi",
+    "membership_no": "152333",
+    "udin": "—",
+    "place": "—",
+    "report_date": "—",
+    "deed_date": "01 April 2018"
+  },
+  "notes": [
+    {
+      "key": "entity",
+      "title": "Brief about the Entity",
+      "items": [],
+      "footnotes": [
+        "Partnership firm manufacturing machined components and job-work."
+      ]
+    },
+    {
+      "key": "policies",
+      "title": "Significant Accounting Policies",
+      "items": [],
+      "footnotes": [
+        "Historical cost, accrual basis.",
+        "Partner remuneration and interest within Section 40(b).",
+        "Current tax provided at 33.34% effective."
+      ]
+    },
+    {
+      "key": "st_provisions",
+      "title": "Short-Term Provisions",
+      "items": [
+        {
+          "label": "Provision for income tax (firm)",
+          "cy": 174174,
+          "py": 149000
+        }
+      ],
+      "footnotes": []
+    },
+    {
+      "key": "inventories",
+      "title": "Inventories",
+      "items": [
+        {
+          "label": "Finished goods and stores",
+          "cy": 400000,
+          "py": 300000
+        }
+      ],
+      "footnotes": []
+    },
+    {
+      "key": "trade_receivables",
+      "title": "Trade Receivables",
+      "items": [
+        {
+          "label": "Outstanding <= 6 months (unsecured, good)",
+          "cy": 300000,
+          "py": 100000
+        }
+      ],
+      "footnotes": []
+    },
+    {
+      "key": "cash_bank",
+      "title": "Cash and Bank Balances",
+      "items": [
+        {
+          "label": "Cash and bank",
+          "cy": 110000,
+          "py": 59000
+        }
+      ],
+      "footnotes": []
+    },
+    {
+      "key": "revenue",
+      "title": "Revenue from Operations",
+      "items": [
+        {
+          "label": "Sale of goods and job-work",
+          "cy": 5000000,
+          "py": 4500000
+        }
+      ],
+      "footnotes": []
+    },
+    {
+      "key": "other_income",
+      "title": "Other Income",
+      "items": [
+        {
+          "label": "Interest and misc income",
+          "cy": 50000,
+          "py": 40000
+        }
+      ],
+      "footnotes": []
+    },
+    {
+      "key": "cost_materials",
+      "title": "Cost of Materials Consumed",
+      "items": [
+        {
+          "label": "Materials consumed",
+          "cy": 3000000,
+          "py": 2700000
+        }
+      ],
+      "footnotes": []
+    },
+    {
+      "key": "employee_benefits",
+      "title": "Employee Benefits Expense",
+      "items": [
+        {
+          "label": "Wages, salaries and welfare",
+          "cy": 500000,
+          "py": 450000
+        }
+      ],
+      "footnotes": []
+    },
+    {
+      "key": "finance_costs",
+      "title": "Finance Costs",
+      "items": [
+        {
+          "label": "Interest on loans (excl. interest on capital)",
+          "cy": 100000,
+          "py": 90000
+        }
+      ],
+      "footnotes": []
+    },
+    {
+      "key": "depreciation",
+      "title": "Depreciation and Amortisation Expense",
+      "items": [
+        {
+          "label": "Depreciation for the year",
+          "cy": 328500,
+          "py": 300000
+        }
+      ],
+      "footnotes": []
+    },
+    {
+      "key": "other_expenses",
+      "title": "Manufacturing and Other Expenses",
+      "items": [
+        {
+          "label": "Manufacturing and other expenses",
+          "cy": 600000,
+          "py": 553000
+        }
+      ],
+      "footnotes": []
+    },
+    {
+      "key": "prev_year",
+      "title": "Previous Year Figures",
+      "items": [],
+      "footnotes": [
+        "SAT historically debited to capital restated to accrual; prior-year tax routed through Withdrawals for comparability."
+      ]
+    },
+    {
+      "key": "rounding",
+      "title": "Rounding-off",
+      "items": [],
+      "footnotes": [
+        "Figures in Rupees to two decimals."
+      ]
+    }
+  ],
+  "owner_capital": null,
+  "partners": [
+    {
+      "name": "Karan Sharma",
+      "psr": 60,
+      "opening_cy": 1500000,
+      "introduced_cy": 0.0,
+      "share_profit_cy": 76395.6,
+      "interest_cy": 60000,
+      "remuneration_cy": 72000,
+      "withdrawals_cy": 200000,
+      "opening_py": 1450000,
+      "introduced_py": 0.0,
+      "share_profit_py": 50000,
+      "interest_py": 55000,
+      "remuneration_py": 70000,
+      "withdrawals_py": 125000
+    },
+    {
+      "name": "Abhishek Kumar Mishra",
+      "psr": 40,
+      "opening_cy": 1000000,
+      "introduced_cy": 0.0,
+      "share_profit_cy": 50930.4,
+      "interest_cy": 40000,
+      "remuneration_cy": 48000,
+      "withdrawals_cy": 150000,
+      "opening_py": 950000,
+      "introduced_py": 0.0,
+      "share_profit_py": 40000,
+      "interest_py": 38000,
+      "remuneration_py": 45000,
+      "withdrawals_py": 73000
+    }
+  ],
+  "ppe_assets": [
+    {
+      "name": "Plant & Machinery",
+      "rate": "15%",
+      "gb_open": 2000000,
+      "additions": 0.0,
+      "accdep_open": 100000,
+      "dep_year": 285000
+    },
+    {
+      "name": "Furniture & Fixtures",
+      "rate": "15%",
+      "gb_open": 300000,
+      "additions": 0.0,
+      "accdep_open": 10000,
+      "dep_year": 43500
+    }
+  ],
+  "depreciation_case": "B",
+  "firm_tax": {
+    "current_tax_cy": 174174,
+    "current_tax_py": 149000,
+    "restatement_note": ""
+  },
+  "pl": {
+    "net_profit_cy": 0.0,
+    "net_profit_py": 0.0
+  }
+}

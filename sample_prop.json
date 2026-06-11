@@ -1,0 +1,238 @@
+{
+  "entity": {
+    "name": "Truptiben Jayeshbhai Joshi",
+    "constitution": "proprietorship",
+    "cy_label": "31 March 2025",
+    "py_label": "31 March 2024",
+    "cy_fy": "2024-25",
+    "nature_of_business": "Trading",
+    "nce_level": "IV",
+    "pan": "—",
+    "address": "—",
+    "gstin": "—",
+    "date_of_commencement": "—",
+    "ca_firm": "M S Joshi & Co",
+    "frn": "0138082W",
+    "ca_partner": "CA Mehulkumar S. Joshi",
+    "membership_no": "152333",
+    "udin": "—",
+    "place": "—",
+    "report_date": "—",
+    "deed_date": "—"
+  },
+  "notes": [
+    {
+      "key": "entity",
+      "title": "Brief about the Entity",
+      "items": [],
+      "footnotes": [
+        "Sole proprietorship engaged in trading. PAN: -; GSTIN: -."
+      ]
+    },
+    {
+      "key": "policies",
+      "title": "Significant Accounting Policies",
+      "items": [],
+      "footnotes": [
+        "Prepared on historical cost, accrual basis.",
+        "Inventories at lower of cost or NRV (FIFO).",
+        "Being a proprietorship, no provision for income tax is made in these accounts."
+      ]
+    },
+    {
+      "key": "nc_investments",
+      "title": "Non-Current Investments",
+      "items": [
+        {
+          "label": "Gold ornaments (reclassified from fixed assets)",
+          "cy": 195000,
+          "py": 178000
+        }
+      ],
+      "footnotes": []
+    },
+    {
+      "key": "inventories",
+      "title": "Inventories",
+      "items": [
+        {
+          "label": "Stock-in-trade",
+          "cy": 300000,
+          "py": 280000
+        }
+      ],
+      "footnotes": []
+    },
+    {
+      "key": "trade_receivables",
+      "title": "Trade Receivables",
+      "items": [
+        {
+          "label": "Outstanding <= 6 months (unsecured, good)",
+          "cy": 200000,
+          "py": 180000
+        }
+      ],
+      "footnotes": []
+    },
+    {
+      "key": "cash_bank",
+      "title": "Cash and Bank Balances",
+      "items": [
+        {
+          "label": "Cash on hand",
+          "cy": 49271,
+          "py": 68720
+        },
+        {
+          "label": "Balances with banks",
+          "cy": 60000,
+          "py": 100000
+        }
+      ],
+      "footnotes": []
+    },
+    {
+      "key": "revenue",
+      "title": "Revenue from Operations",
+      "items": [
+        {
+          "label": "Sale of goods",
+          "cy": 1500000,
+          "py": 1400000
+        }
+      ],
+      "footnotes": []
+    },
+    {
+      "key": "other_income",
+      "title": "Other Income",
+      "items": [
+        {
+          "label": "Bank interest received",
+          "cy": 6439,
+          "py": 6000
+        }
+      ],
+      "footnotes": []
+    },
+    {
+      "key": "cost_materials",
+      "title": "Purchases of Stock-in-Trade",
+      "items": [
+        {
+          "label": "Purchases",
+          "cy": 700000,
+          "py": 700000
+        }
+      ],
+      "footnotes": []
+    },
+    {
+      "key": "employee_benefits",
+      "title": "Employee Benefits Expense",
+      "items": [
+        {
+          "label": "Wages and staff welfare",
+          "cy": 60000,
+          "py": 60000
+        }
+      ],
+      "footnotes": []
+    },
+    {
+      "key": "finance_costs",
+      "title": "Finance Costs",
+      "items": [
+        {
+          "label": "Bank interest paid",
+          "cy": 5000,
+          "py": 5000
+        }
+      ],
+      "footnotes": []
+    },
+    {
+      "key": "other_expenses",
+      "title": "Other Expenses",
+      "items": [
+        {
+          "label": "Administrative and selling expenses",
+          "cy": 45987,
+          "py": 41000
+        }
+      ],
+      "footnotes": [
+        "Payment to auditor is included in administrative expenses."
+      ]
+    },
+    {
+      "key": "depreciation",
+      "title": "Depreciation and Amortisation Expense",
+      "items": [],
+      "footnotes": []
+    },
+    {
+      "key": "prev_year",
+      "title": "Previous Year Figures",
+      "items": [],
+      "footnotes": [
+        "PY Bank Interest of Rs.6,439 credited direct to Capital regrouped to Other Income; PY Capital closing unchanged."
+      ]
+    },
+    {
+      "key": "rounding",
+      "title": "Rounding-off",
+      "items": [],
+      "footnotes": [
+        "Figures in Rupees to two decimals."
+      ]
+    }
+  ],
+  "owner_capital": {
+    "name": "Truptiben Jayeshbhai Joshi",
+    "opening_cy": 1000000,
+    "introduced_cy": 0.0,
+    "net_profit_cy": 695452,
+    "interest_cy": 0.0,
+    "withdrawals_cy": 687181,
+    "opening_py": 700000,
+    "introduced_py": 0.0,
+    "net_profit_py": 600000,
+    "interest_py": 0.0,
+    "withdrawals_py": 300000
+  },
+  "partners": [],
+  "ppe_assets": [
+    {
+      "name": "Furniture & Fixtures",
+      "rate": "",
+      "gb_open": 113280,
+      "additions": 10720,
+      "accdep_open": 0.0,
+      "dep_year": 0.0
+    },
+    {
+      "name": "Home Appliances",
+      "rate": "",
+      "gb_open": 50000,
+      "additions": 0.0,
+      "accdep_open": 0.0,
+      "dep_year": 0.0
+    },
+    {
+      "name": "Mobile",
+      "rate": "",
+      "gb_open": 30000,
+      "additions": 0.0,
+      "accdep_open": 0.0,
+      "dep_year": 0.0
+    }
+  ],
+  "depreciation_case": "A",
+  "firm_tax": null,
+  "pl": {
+    "net_profit_cy": 0.0,
+    "net_profit_py": 0.0
+  }
+}

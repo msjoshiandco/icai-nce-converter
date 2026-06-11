@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>ICAI NCE Conversion Tool — M S Joshi &amp; Co</title>
+<style>
+  :root{ --navy:#1F3864; --blue:#1F4E79; --line:#d9e0ea; --bg:#f5f7fb; }
+  *{ box-sizing:border-box; font-family:"Calibri Light",Calibri,Segoe UI,Arial,sans-serif; }
+  body{ margin:0; background:var(--bg); color:#1c2430; }
+  header{ background:var(--navy); color:#fff; padding:18px 28px; }
+  header h1{ margin:0; font-size:20px; font-weight:700; }
+  header p{ margin:4px 0 0; font-size:13px; opacity:.85; }
+  main{ max-width:980px; margin:24px auto; padding:0 20px 60px; }
+  .card{ background:#fff; border:1px solid var(--line); border-radius:10px; padding:20px 22px; margin-bottom:20px; }
+  .card h2{ margin:0 0 14px; font-size:16px; color:var(--navy); }
+  .step{ display:inline-block; width:24px; height:24px; line-height:24px; text-align:center;
+          background:var(--blue); color:#fff; border-radius:50%; font-size:13px; margin-right:8px; }
+  label{ font-size:14px; font-weight:600; display:block; margin:12px 0 6px; }
+  .radio{ display:inline-flex; align-items:center; margin-right:18px; font-weight:600; font-size:14px; }
+  .radio input{ margin-right:6px; }
+  input[type=file]{ display:block; font-size:13px; margin-bottom:8px; }
+  textarea{ width:100%; min-height:120px; border:1px solid var(--line); border-radius:8px; padding:10px;
+            font-family:Consolas,monospace; font-size:12.5px; }
+  button{ background:var(--blue); color:#fff; border:none; border-radius:8px; padding:11px 20px;
+          font-size:14px; font-weight:700; cursor:pointer; }
+  button.secondary{ background:#fff; color:var(--blue); border:1.5px solid var(--blue); }
+  button:disabled{ opacity:.5; cursor:default; }
+  .row{ display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
+  .muted{ color:#5b6675; font-size:13px; }
+  .pill{ display:inline-block; background:#eef2f8; color:var(--navy); border-radius:20px;
+         padding:3px 10px; font-size:12px; margin:2px 4px 2px 0; }
+  #status{ font-size:13px; margin-top:10px; min-height:18px; }
+  .ok{ color:#1a7f37; } .err{ color:#b3261e; }
+  table{ width:100%; border-collapse:collapse; font-size:13px; margin-top:8px; }
+  th,td{ border:1px solid var(--line); padding:6px 8px; text-align:left; }
+  th{ background:#eef2f8; }
+  details summary{ cursor:pointer; font-weight:600; color:var(--blue); font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>ICAI NCE Financial Statements Conversion Tool</h1>
+  <p>M S Joshi &amp; Co · FRN 0138082W · converts T-format accounts into the ICAI NCE format (formula-linked Excel)</p>
+</header>
+<main>
+
+  <div class="card">
+    <h2><span class="step">1</span>Source &amp; constitution</h2>
+    <label>Constitution of the entity</label>
+    <span class="radio"><input type="radio" name="constitution" value="proprietorship" checked> Proprietorship</span>
+    <span class="radio"><input type="radio" name="constitution" value="partnership"> Partnership firm</span>
+    <span class="muted">(LLPs are not yet supported — separate ICAI format required.)</span>
+
+    <label>Upload both years' T-format statements (PDF / Excel / image) — and the depreciation chart if depreciation is in the P&amp;L</label>
+    <input id="files" type="file" multiple
+           accept=".pdf,.xlsx,.xls,.png,.jpg,.jpeg,.csv,.txt,.docx"/>
+
+    <label>Notes for the extractor (optional) — related parties, deed figures, placeholders…</label>
+    <textarea id="extra" style="min-height:60px" placeholder="e.g. Related party: ARK Technology (common control). Interest on capital 12% p.a."></textarea>
+
+    <div class="row" style="margin-top:14px">
+      <button id="extractBtn">Extract with Claude</button>
+      <span class="muted">Reads the files, classifies to ICAI heads, returns editable data.</span>
+    </div>
+    <div id="status"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="step">2</span>Review &amp; edit extracted data</h2>
+    <p class="muted">This JSON is the structured data the workbook is built from. Check the figures and classification, edit if needed, then generate. You can also paste your own JSON here to build without the LLM.</p>
+    <div id="summary"></div>
+    <details style="margin:10px 0"><summary>Show / edit raw JSON</summary>
+      <textarea id="json" style="min-height:300px"></textarea>
+    </details>
+    <div class="row" style="margin-top:10px">
+      <button id="genBtn" class="">Generate &amp; download workbook</button>
+      <button id="loadSample" class="secondary">Load sample (proprietorship)</button>
+      <button id="loadSampleF" class="secondary">Load sample (firm)</button>
+    </div>
+    <div id="status2"></div>
+  </div>
+
+  <p class="muted">Output: <code>[Entity]_FS_FY[YY-YY]_ICAI_NCE.xlsx</code> — Index · Balance Sheet · Statement of P&amp;L (+Appropriation) · Notes. Every BS/P&amp;L figure is formula-linked; both years tally; Calibri Light 11; no underline.</p>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+function setStatus(el, msg, cls){ el.className = cls||""; el.textContent = msg; }
+
+function renderSummary(p){
+  if(!p || !p.entity){ $("summary").innerHTML=""; return; }
+  const notes = (p.notes||[]).map(n=>`<span class="pill">${n.key}</span>`).join(" ");
+  $("summary").innerHTML =
+    `<table><tr><th>Entity</th><td>${p.entity.name||"—"}</td>
+       <th>Constitution</th><td>${p.entity.constitution||"—"}</td></tr>
+     <tr><th>CY</th><td>${p.entity.cy_label||"—"}</td>
+       <th>PY</th><td>${p.entity.py_label||"—"}</td></tr>
+     <tr><th>Depreciation</th><td>Case ${p.depreciation_case||"A"}</td>
+       <th>PPE assets</th><td>${(p.ppe_assets||[]).length}</td></tr></table>
+     <div style="margin-top:8px"><b>Notes:</b><br>${notes}</div>`;
+}
+
+function syncFromJson(){
+  try{ renderSummary(JSON.parse($("json").value)); }catch(e){ /* ignore */ }
+}
+$("json").addEventListener("input", syncFromJson);
+
+$("extractBtn").onclick = async () => {
+  const files = $("files").files;
+  if(!files.length){ setStatus($("status"),"Please upload at least the two years' statements.","err"); return; }
+  const fd = new FormData();
+  fd.append("constitution", document.querySelector('input[name=constitution]:checked').value);
+  fd.append("extra", $("extra").value);
+  for(const f of files) fd.append("files", f);
+  setStatus($("status"),"Extracting with Claude… this can take 20–60s.","");
+  $("extractBtn").disabled = true;
+  try{
+    const r = await fetch("/api/extract",{method:"POST",body:fd});
+    if(!r.ok){ const t=await r.text(); throw new Error(t); }
+    const data = await r.json();
+    $("json").value = JSON.stringify(data,null,2);
+    renderSummary(data);
+    setStatus($("status"),"Extracted. Review the data in step 2, then generate.","ok");
+  }catch(e){ setStatus($("status"),"Extraction failed: "+e.message,"err"); }
+  $("extractBtn").disabled = false;
+};
+
+$("genBtn").onclick = async () => {
+  let payload;
+  try{ payload = JSON.parse($("json").value); }
+  catch(e){ setStatus($("status2"),"The JSON is invalid: "+e.message,"err"); return; }
+  setStatus($("status2"),"Building workbook…","");
+  try{
+    const r = await fetch("/api/generate",{method:"POST",
+       headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload)});
+    if(!r.ok){ const t=await r.text(); throw new Error(t); }
+    const blob = await r.blob();
+    const cd = r.headers.get("Content-Disposition")||"";
+    const m = cd.match(/filename="([^"]+)"/);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = m ? m[1] : "ICAI_NCE.xlsx";
+    a.click();
+    setStatus($("status2"),"Workbook generated and downloaded.","ok");
+  }catch(e){ setStatus($("status2"),"Build failed: "+e.message,"err"); }
+};
+
+$("loadSample").onclick = async () => { const d = await (await fetch("/static/sample_prop.json")).json();
+  $("json").value = JSON.stringify(d,null,2); renderSummary(d); setStatus($("status2"),"Sample loaded.","ok"); };
+$("loadSampleF").onclick = async () => { const d = await (await fetch("/static/sample_firm.json")).json();
+  $("json").value = JSON.stringify(d,null,2); renderSummary(d); setStatus($("status2"),"Sample loaded.","ok"); };
+</script>
+</body>
+</html>
