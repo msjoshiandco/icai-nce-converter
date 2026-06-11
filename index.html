@@ -3,153 +3,236 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>ICAI NCE Conversion Tool — M S Joshi &amp; Co</title>
+<title>ICAI NCE Financial Statement Converter — M S Joshi &amp; Co</title>
 <style>
-  :root{ --navy:#1F3864; --blue:#1F4E79; --line:#d9e0ea; --bg:#f5f7fb; }
-  *{ box-sizing:border-box; font-family:"Calibri Light",Calibri,Segoe UI,Arial,sans-serif; }
-  body{ margin:0; background:var(--bg); color:#1c2430; }
-  header{ background:var(--navy); color:#fff; padding:18px 28px; }
-  header h1{ margin:0; font-size:20px; font-weight:700; }
-  header p{ margin:4px 0 0; font-size:13px; opacity:.85; }
-  main{ max-width:980px; margin:24px auto; padding:0 20px 60px; }
-  .card{ background:#fff; border:1px solid var(--line); border-radius:10px; padding:20px 22px; margin-bottom:20px; }
-  .card h2{ margin:0 0 14px; font-size:16px; color:var(--navy); }
-  .step{ display:inline-block; width:24px; height:24px; line-height:24px; text-align:center;
-          background:var(--blue); color:#fff; border-radius:50%; font-size:13px; margin-right:8px; }
-  label{ font-size:14px; font-weight:600; display:block; margin:12px 0 6px; }
-  .radio{ display:inline-flex; align-items:center; margin-right:18px; font-weight:600; font-size:14px; }
-  .radio input{ margin-right:6px; }
-  input[type=file]{ display:block; font-size:13px; margin-bottom:8px; }
-  textarea{ width:100%; min-height:120px; border:1px solid var(--line); border-radius:8px; padding:10px;
-            font-family:Consolas,monospace; font-size:12.5px; }
-  button{ background:var(--blue); color:#fff; border:none; border-radius:8px; padding:11px 20px;
-          font-size:14px; font-weight:700; cursor:pointer; }
-  button.secondary{ background:#fff; color:var(--blue); border:1.5px solid var(--blue); }
-  button:disabled{ opacity:.5; cursor:default; }
-  .row{ display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
-  .muted{ color:#5b6675; font-size:13px; }
-  .pill{ display:inline-block; background:#eef2f8; color:var(--navy); border-radius:20px;
-         padding:3px 10px; font-size:12px; margin:2px 4px 2px 0; }
-  #status{ font-size:13px; margin-top:10px; min-height:18px; }
-  .ok{ color:#1a7f37; } .err{ color:#b3261e; }
-  table{ width:100%; border-collapse:collapse; font-size:13px; margin-top:8px; }
-  th,td{ border:1px solid var(--line); padding:6px 8px; text-align:left; }
-  th{ background:#eef2f8; }
-  details summary{ cursor:pointer; font-weight:600; color:var(--blue); font-size:13px; }
+:root{--navy:#1f3a5f;--navy2:#274b78;--blue:#1f6fe0;--blue2:#0b57d0;--green:#1c8a5a;--orange:#e8662a;--ink:#1c2430;--muted:#64707e;--line:#e2e8f0;--bg:#eef1f6;--card:#fff;--dark:#1f2430;}
+*{box-sizing:border-box;font-family:"Segoe UI",Calibri,Arial,sans-serif;}
+body{margin:0;background:var(--bg);color:var(--ink);}
+a{color:var(--orange);text-decoration:none;}
+.topbar{background:#fff;display:flex;align-items:center;justify-content:space-between;padding:14px 26px;border-bottom:1px solid var(--line);}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand .logo{width:34px;height:40px;color:var(--blue);}
+.brand h1{margin:0;font-size:20px;font-weight:800;color:#16263b;}
+.brand p{margin:0;font-size:12px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+.btn-ghost{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;font-size:13px;color:#444;cursor:pointer;}
+.banner{background:linear-gradient(180deg,var(--navy2),var(--navy));border-top:3px solid var(--orange);border-bottom:3px solid var(--orange);color:#fff;text-align:center;padding:16px 10px;}
+.banner h2{margin:0;font-size:22px;font-weight:800;}
+.banner p{margin:4px 0 0;font-size:13px;opacity:.8;}
+main{max-width:1120px;margin:22px auto;padding:0 18px 70px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:20px;overflow:hidden;box-shadow:0 1px 2px rgba(20,30,50,.04);}
+.card-head{background:var(--dark);color:#fff;padding:13px 20px;font-weight:700;font-size:15px;}
+.card-body{padding:20px 22px;}
+.sub{color:var(--muted);font-size:14px;margin:0 0 16px;}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.choice{border:2px solid var(--line);border-radius:12px;padding:26px;text-align:center;cursor:pointer;transition:.15s;background:#fff;}
+.choice:hover{border-color:#b8c6db;}
+.choice.sel{border-color:var(--blue2);background:#f3f8ff;box-shadow:0 0 0 3px rgba(31,111,224,.12);}
+.choice .ic{font-size:30px;margin-bottom:10px;}
+.choice.prop .ic{color:var(--orange);}.choice.part .ic{color:var(--blue2);}
+.choice h3{margin:0 0 4px;font-size:18px;}
+.choice small{color:var(--muted);}
+.collap-head{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:16px 20px;font-weight:700;}
+.collap-body{padding:0 20px 20px;display:none;}
+.collap.open .collap-body{display:block;}
+.collap.open .chev{transform:rotate(180deg);}
+.chev{transition:.2s;color:var(--muted);}
+label.fl{display:block;font-size:13px;font-weight:700;margin:0 0 6px;color:#28323e;}
+.grid3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;}
+.grid2{display:grid;grid-template-columns:1fr 2fr;gap:14px;margin-top:14px;}
+input[type=text],select,textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px;background:#fff;}
+textarea{min-height:46px;resize:vertical;}
+.single{display:flex;align-items:center;gap:8px;margin:4px 2px 18px;font-size:14px;color:#36414e;}
+.zones{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.zone{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;}
+.zone .zh{color:#fff;padding:11px 16px;font-weight:700;font-size:14px;}
+.zone.cy .zh{background:var(--blue);}.zone.py .zh{background:var(--green);}
+.drop{margin:16px;border:2px dashed #ccd6e4;border-radius:10px;padding:28px 14px;text-align:center;}
+.drop.cy .cloud{color:var(--blue);}.drop.py .cloud{color:var(--green);}
+.drop .cloud{font-size:40px;}
+.drop b{display:block;margin:10px 0 4px;font-size:16px;}
+.drop small{color:var(--muted);}
+.browse{margin-top:12px;border:1px solid;border-radius:8px;background:#fff;padding:8px 16px;cursor:pointer;font-size:14px;}
+.drop.cy .browse{color:var(--blue);border-color:var(--blue);}
+.drop.py .browse{color:var(--green);border-color:var(--green);}
+.fname{margin-top:10px;font-size:13px;color:#2b6a3f;font-weight:600;word-break:break-all;}
+.zone.single-hide{opacity:.5;pointer-events:none;}
+.convert-wrap{text-align:center;margin:24px 0 8px;}
+.convert{background:linear-gradient(180deg,#3b7de0,#1f6fe0);color:#fff;border:none;border-radius:10px;padding:15px 34px;font-size:17px;font-weight:800;cursor:pointer;box-shadow:0 6px 16px rgba(31,111,224,.3);}
+.convert:disabled{background:#9fb4d4;box-shadow:none;cursor:default;}
+#status{text-align:center;font-size:14px;margin:14px 0;min-height:20px;}
+.ok{color:#1a7f37;font-weight:600;}.err{color:#c0392b;font-weight:600;}
+.spinner{display:inline-block;width:15px;height:15px;border:2px solid #cdd;border-top-color:var(--blue);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:7px;}
+@keyframes sp{to{transform:rotate(360deg)}}
+.howto li{margin:5px 0;font-size:14px;color:#33414f;}
+details.review summary{cursor:pointer;color:var(--blue2);font-weight:600;font-size:13px;}
+details.review textarea{margin-top:8px;min-height:240px;font-family:Consolas,monospace;font-size:12px;}
+.review-actions{margin-top:10px;}
+.btn-sm{border:1px solid var(--blue);color:var(--blue);background:#fff;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;font-weight:600;}
+footer{background:#161d2b;color:#c7cfdb;margin-top:30px;}
+.foot{max-width:1120px;margin:0 auto;padding:30px 22px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;}
+.foot h4{color:var(--orange);margin:0 0 12px;font-size:14px;}
+.foot div p{margin:4px 0;font-size:13px;}
+.foot a{color:var(--orange);}
+.copy{text-align:center;padding:14px;border-top:1px solid #2a3344;font-size:12px;color:#8a95a6;}
+.copy b{color:var(--orange);}
+@media(max-width:780px){.choices,.zones,.grid3,.grid2,.foot{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
-<header>
-  <h1>ICAI NCE Financial Statements Conversion Tool</h1>
-  <p>M S Joshi &amp; Co · FRN 0138082W · converts T-format accounts into the ICAI NCE format (formula-linked Excel)</p>
-</header>
+<div class="topbar">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 24 28" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="24" rx="2"/><path d="M6 8h12M6 13h12M6 18h8"/></svg>
+    <div><h1>M S Joshi &amp; Co</h1><p>Chartered Accountants</p></div>
+  </div>
+  <button class="btn-ghost" onclick="alert('M S Joshi & Co · FRN 0138082W · M.No 152333')">About</button>
+</div>
+<div class="banner">
+  <h2>ICAI NCE Financial Statement Converter</h2>
+  <p>T-Format to Schedule III — Fully Automated</p>
+</div>
 <main>
-
   <div class="card">
-    <h2><span class="step">1</span>Source &amp; constitution</h2>
-    <label>Constitution of the entity</label>
-    <span class="radio"><input type="radio" name="constitution" value="proprietorship" checked> Proprietorship</span>
-    <span class="radio"><input type="radio" name="constitution" value="partnership"> Partnership firm</span>
-    <span class="muted">(LLPs are not yet supported — separate ICAI format required.)</span>
-
-    <label>Upload both years' T-format statements (PDF / Excel / image) — and the depreciation chart if depreciation is in the P&amp;L</label>
-    <input id="files" type="file" multiple
-           accept=".pdf,.xlsx,.xls,.png,.jpg,.jpeg,.csv,.txt,.docx"/>
-
-    <label>Notes for the extractor (optional) — related parties, deed figures, placeholders…</label>
-    <textarea id="extra" style="min-height:60px" placeholder="e.g. Related party: ARK Technology (common control). Interest on capital 12% p.a."></textarea>
-
-    <div class="row" style="margin-top:14px">
-      <button id="extractBtn">Extract with Claude</button>
-      <span class="muted">Reads the files, classifies to ICAI heads, returns editable data.</span>
+    <div class="card-head">Step 0 — Constitution Type</div>
+    <div class="card-body">
+      <p class="sub">Select the type of entity before uploading files</p>
+      <div class="choices">
+        <div class="choice prop sel" id="ch-prop" onclick="pickC('proprietorship')"><div class="ic">&#128100;</div><h3>Proprietorship Concern</h3><small>Single owner / Sole proprietor</small></div>
+        <div class="choice part" id="ch-part" onclick="pickC('partnership')"><div class="ic">&#128101;</div><h3>Partnership Firm</h3><small>Two or more partners</small></div>
+      </div>
     </div>
-    <div id="status"></div>
   </div>
-
-  <div class="card">
-    <h2><span class="step">2</span>Review &amp; edit extracted data</h2>
-    <p class="muted">This JSON is the structured data the workbook is built from. Check the figures and classification, edit if needed, then generate. You can also paste your own JSON here to build without the LLM.</p>
-    <div id="summary"></div>
-    <details style="margin:10px 0"><summary>Show / edit raw JSON</summary>
-      <textarea id="json" style="min-height:300px"></textarea>
-    </details>
-    <div class="row" style="margin-top:10px">
-      <button id="genBtn" class="">Generate &amp; download workbook</button>
-      <button id="loadSample" class="secondary">Load sample (proprietorship)</button>
-      <button id="loadSampleF" class="secondary">Load sample (firm)</button>
+  <div class="card collap" id="clientCard">
+    <div class="collap-head" onclick="document.getElementById('clientCard').classList.toggle('open')">
+      <span>Client Information <span style="color:var(--muted);font-weight:400">(optional)</span></span><span class="chev">&#9662;</span>
     </div>
-    <div id="status2"></div>
+    <div class="collap-body">
+      <div class="grid3">
+        <div><label class="fl">Entity / Firm Name</label><input type="text" id="f-name" placeholder="e.g. Sharma Traders"></div>
+        <div><label class="fl">PAN</label><input type="text" id="f-pan" placeholder="XXXXX0000X"></div>
+        <div><label class="fl">GSTIN</label><input type="text" id="f-gstin" placeholder="OPTIONAL"></div>
+      </div>
+      <div class="grid2">
+        <div><label class="fl">Business Nature</label><select id="f-nature"><option value="">-- Select --</option><option>Trading</option><option>Manufacturing</option><option>Job-work</option><option>Services</option><option>Profession</option><option>Other</option></select></div>
+        <div><label class="fl">Business Description</label><textarea id="f-desc" placeholder="Brief description of business activity"></textarea></div>
+      </div>
+    </div>
   </div>
-
-  <p class="muted">Output: <code>[Entity]_FS_FY[YY-YY]_ICAI_NCE.xlsx</code> — Index · Balance Sheet · Statement of P&amp;L (+Appropriation) · Notes. Every BS/P&amp;L figure is formula-linked; both years tally; Calibri Light 11; no underline.</p>
+  <label class="single"><input type="checkbox" id="singleFile" onchange="toggleSingle()"> Both years are in a single file</label>
+  <div class="zones">
+    <div class="zone cy" id="zoneCY">
+      <div class="zh">Current Year (CY) File</div>
+      <div class="drop cy" id="dropCY">
+        <div class="cloud">&#9729;</div><b>Drop Current Year file here</b>
+        <small>Supported: Excel (.xlsx), Word (.docx), PDF (.pdf), image</small><br>
+        <button class="browse" onclick="document.getElementById('inCY').click()">Browse Files</button>
+        <div class="fname" id="nameCY"></div>
+        <input type="file" id="inCY" style="display:none" accept=".xlsx,.xls,.docx,.pdf,.png,.jpg,.jpeg" onchange="setName('CY')">
+      </div>
+    </div>
+    <div class="zone py" id="zonePY">
+      <div class="zh">Previous Year (PY) File</div>
+      <div class="drop py" id="dropPY">
+        <div class="cloud">&#9729;</div><b>Drop Previous Year file here</b>
+        <small>Supported: Excel (.xlsx), Word (.docx), PDF (.pdf), image</small><br>
+        <button class="browse" onclick="document.getElementById('inPY').click()">Browse Files</button>
+        <div class="fname" id="namePY"></div>
+        <input type="file" id="inPY" style="display:none" accept=".xlsx,.xls,.docx,.pdf,.png,.jpg,.jpeg" onchange="setName('PY')">
+      </div>
+    </div>
+  </div>
+  <div class="convert-wrap"><button class="convert" id="convertBtn" onclick="convert()">Convert to ICAI NCE Format</button></div>
+  <div id="status"></div>
+  <details class="review card" style="padding:14px 20px">
+    <summary>Review / edit extracted data &amp; regenerate (advanced)</summary>
+    <div style="padding-top:10px">
+      <p class="sub">After a conversion, the structured data appears here. Edit it and regenerate if needed. You can also paste your own JSON and click Generate.</p>
+      <textarea id="json"></textarea>
+      <div class="review-actions">
+        <button class="btn-sm" onclick="generateFromJson()">Generate workbook from this JSON</button>
+        <button class="btn-sm" onclick="loadSample('prop')">Load sample (proprietorship)</button>
+        <button class="btn-sm" onclick="loadSample('firm')">Load sample (firm)</button>
+      </div>
+    </div>
+  </details>
+  <div class="card"><div class="card-body howto">
+    <p style="font-weight:700;margin:0 0 8px">How to use</p>
+    <ol style="margin:0;padding-left:20px">
+      <li>Select the constitution type (Proprietorship or Partnership).</li>
+      <li>Optionally fill in client details (entity name, PAN, GSTIN, etc.).</li>
+      <li>Prepare T-format financial statements in Excel (.xlsx), Word (.docx), or PDF (.pdf).</li>
+      <li>Upload files for Current Year and Previous Year (or tick "single file" if both years are in one file).</li>
+      <li>Click "Convert" and download the auto-generated ICAI NCE format workbook.</li>
+      <li>Review the output, verify placeholders, and finalise.</li>
+    </ol>
+  </div></div>
 </main>
-
+<footer>
+  <div class="foot">
+    <div><h4>CONTACT</h4><p><b>CA Mehulkumar S. Joshi</b></p><p>Membership No.: 152333</p><p>FRN: 0138082W</p></div>
+    <div><h4>ONLINE</h4><p>Email: <a href="mailto:msjoshiandco@gmail.com">msjoshiandco@gmail.com</a></p><p>Firm: M S Joshi &amp; Co</p></div>
+    <div><h4>OFFICE</h4><p>M S Joshi &amp; Co</p><p>Chartered Accountants</p><p>India</p></div>
+  </div>
+  <div class="copy">Developed for <b>M S JOSHI &amp; CO</b> &nbsp;·&nbsp; &copy; 2026 M S Joshi &amp; Co, Chartered Accountants. All rights reserved.</div>
+</footer>
 <script>
-const $ = id => document.getElementById(id);
-function setStatus(el, msg, cls){ el.className = cls||""; el.textContent = msg; }
-
-function renderSummary(p){
-  if(!p || !p.entity){ $("summary").innerHTML=""; return; }
-  const notes = (p.notes||[]).map(n=>`<span class="pill">${n.key}</span>`).join(" ");
-  $("summary").innerHTML =
-    `<table><tr><th>Entity</th><td>${p.entity.name||"—"}</td>
-       <th>Constitution</th><td>${p.entity.constitution||"—"}</td></tr>
-     <tr><th>CY</th><td>${p.entity.cy_label||"—"}</td>
-       <th>PY</th><td>${p.entity.py_label||"—"}</td></tr>
-     <tr><th>Depreciation</th><td>Case ${p.depreciation_case||"A"}</td>
-       <th>PPE assets</th><td>${(p.ppe_assets||[]).length}</td></tr></table>
-     <div style="margin-top:8px"><b>Notes:</b><br>${notes}</div>`;
-}
-
-function syncFromJson(){
-  try{ renderSummary(JSON.parse($("json").value)); }catch(e){ /* ignore */ }
-}
-$("json").addEventListener("input", syncFromJson);
-
-$("extractBtn").onclick = async () => {
-  const files = $("files").files;
-  if(!files.length){ setStatus($("status"),"Please upload at least the two years' statements.","err"); return; }
-  const fd = new FormData();
-  fd.append("constitution", document.querySelector('input[name=constitution]:checked').value);
-  fd.append("extra", $("extra").value);
-  for(const f of files) fd.append("files", f);
-  setStatus($("status"),"Extracting with Claude… this can take 20–60s.","");
-  $("extractBtn").disabled = true;
+var CONS='proprietorship';
+function pickC(c){CONS=c;
+  document.getElementById('ch-prop').classList.toggle('sel',c==='proprietorship');
+  document.getElementById('ch-part').classList.toggle('sel',c==='partnership');}
+function toggleSingle(){var s=document.getElementById('singleFile').checked;
+  document.getElementById('zonePY').classList.toggle('single-hide',s);
+  document.getElementById('zoneCY').querySelector('.zh').textContent=s?'Single file (both years)':'Current Year (CY) File';}
+function setName(w){var f=document.getElementById('in'+w).files[0];
+  document.getElementById('name'+w).textContent=f?('Selected: '+f.name):'';}
+function setStatus(msg,cls,spin){var e=document.getElementById('status');
+  e.className=cls||'';e.innerHTML=(spin?'<span class="spinner"></span>':'')+msg;}
+function val(id){return (document.getElementById(id).value||'').trim();}
+function clientExtra(){var n=val('f-name'),p=val('f-pan'),g=val('f-gstin'),nat=val('f-nature'),d=val('f-desc');var t=[];
+  if(n)t.push('Entity name: '+n);if(p)t.push('PAN: '+p);if(g)t.push('GSTIN: '+g);
+  if(nat)t.push('Business nature: '+nat);if(d)t.push('Business description: '+d);return t.join('. ');}
+function applyClient(data){data.entity=data.entity||{};
+  if(val('f-name'))data.entity.name=val('f-name');
+  if(val('f-pan'))data.entity.pan=val('f-pan');
+  if(val('f-gstin'))data.entity.gstin=val('f-gstin');
+  if(val('f-nature'))data.entity.nature_of_business=val('f-nature');
+  data.entity.constitution=CONS;}
+function cleanErr(m){try{var j=JSON.parse(m);return j.detail||m;}catch(e){return (m||'').slice(0,300);}}
+async function buildAndDownload(payload){
+  var r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  if(!r.ok){throw new Error(await r.text());}
+  var blob=await r.blob();var cd=r.headers.get('Content-Disposition')||'';var m=cd.match(/filename="([^"]+)"/);
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=m?m[1]:'ICAI_NCE.xlsx';a.click();}
+async function convert(){
+  var single=document.getElementById('singleFile').checked;
+  var cy=document.getElementById('inCY').files[0];var py=document.getElementById('inPY').files[0];
+  if(!cy){setStatus('Please upload the Current Year file.','err');return;}
+  if(!single && !py){setStatus('Please upload the Previous Year file (or tick "single file").','err');return;}
+  var fd=new FormData();fd.append('constitution',CONS);fd.append('extra',clientExtra());fd.append('files',cy);
+  if(!single && py)fd.append('files',py);
+  document.getElementById('convertBtn').disabled=true;
+  setStatus('Reading your statements with Claude and building the workbook... this can take 30-60 seconds.','',true);
   try{
-    const r = await fetch("/api/extract",{method:"POST",body:fd});
-    if(!r.ok){ const t=await r.text(); throw new Error(t); }
-    const data = await r.json();
-    $("json").value = JSON.stringify(data,null,2);
-    renderSummary(data);
-    setStatus($("status"),"Extracted. Review the data in step 2, then generate.","ok");
-  }catch(e){ setStatus($("status"),"Extraction failed: "+e.message,"err"); }
-  $("extractBtn").disabled = false;
-};
-
-$("genBtn").onclick = async () => {
-  let payload;
-  try{ payload = JSON.parse($("json").value); }
-  catch(e){ setStatus($("status2"),"The JSON is invalid: "+e.message,"err"); return; }
-  setStatus($("status2"),"Building workbook…","");
-  try{
-    const r = await fetch("/api/generate",{method:"POST",
-       headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload)});
-    if(!r.ok){ const t=await r.text(); throw new Error(t); }
-    const blob = await r.blob();
-    const cd = r.headers.get("Content-Disposition")||"";
-    const m = cd.match(/filename="([^"]+)"/);
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = m ? m[1] : "ICAI_NCE.xlsx";
-    a.click();
-    setStatus($("status2"),"Workbook generated and downloaded.","ok");
-  }catch(e){ setStatus($("status2"),"Build failed: "+e.message,"err"); }
-};
-
-$("loadSample").onclick = async () => { const d = await (await fetch("/static/sample_prop.json")).json();
-  $("json").value = JSON.stringify(d,null,2); renderSummary(d); setStatus($("status2"),"Sample loaded.","ok"); };
-$("loadSampleF").onclick = async () => { const d = await (await fetch("/static/sample_firm.json")).json();
-  $("json").value = JSON.stringify(d,null,2); renderSummary(d); setStatus($("status2"),"Sample loaded.","ok"); };
+    var r=await fetch('/api/extract',{method:'POST',body:fd});
+    if(!r.ok){throw new Error(await r.text());}
+    var data=await r.json();applyClient(data);
+    document.getElementById('json').value=JSON.stringify(data,null,2);
+    await buildAndDownload(data);
+    setStatus('Done. Your ICAI NCE workbook has been downloaded. Open the Review / edit panel to adjust and regenerate.','ok');
+  }catch(e){setStatus('Conversion failed: '+cleanErr(e.message),'err');}
+  document.getElementById('convertBtn').disabled=false;}
+async function generateFromJson(){var p;
+  try{p=JSON.parse(document.getElementById('json').value);}catch(e){setStatus('JSON is invalid: '+e.message,'err');return;}
+  setStatus('Building workbook...','',true);
+  try{await buildAndDownload(p);setStatus('Workbook generated and downloaded.','ok');}catch(e){setStatus('Build failed: '+cleanErr(e.message),'err');}}
+async function loadSample(which){
+  var d=await(await fetch('/static/sample_'+(which==='firm'?'firm':'prop')+'.json')).json();
+  document.getElementById('json').value=JSON.stringify(d,null,2);
+  setStatus('Sample loaded into the review panel. Click Generate workbook from this JSON.','ok');}
+['CY','PY'].forEach(function(w){var z=document.getElementById('drop'+w);
+  z.addEventListener('dragover',function(e){e.preventDefault();z.style.borderColor='#1f6fe0';});
+  z.addEventListener('dragleave',function(e){z.style.borderColor='#ccd6e4';});
+  z.addEventListener('drop',function(e){e.preventDefault();z.style.borderColor='#ccd6e4';
+    var f=e.dataTransfer.files;if(f.length){document.getElementById('in'+w).files=f;setName(w);}});});
 </script>
 </body>
 </html>
