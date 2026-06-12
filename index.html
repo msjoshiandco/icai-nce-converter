@@ -127,6 +127,9 @@ footer{background:var(--header);color:#c6d2df;margin-top:34px;}
 .recon h4{margin:0 0 8px;font-size:14px;}
 .recon ul{margin:6px 0 0;padding-left:18px;}
 .recon li{margin:3px 0;}
+.tip{background:#eef7f8;border:1px solid #cfe6e9;border-left:4px solid var(--teal);border-radius:10px;
+  padding:11px 16px;font-size:13.5px;color:#1d5a63;margin:0 0 16px;}
+.tip b{color:#0e6a73;}
 </style>
 </head>
 <body>
@@ -192,13 +195,14 @@ footer{background:var(--header);color:#c6d2df;margin-top:34px;}
   <div class="card">
     <div class="card-head"><span class="pill">STEP 3</span> Upload T-Format Statements</div>
     <div class="card-body">
+      <div class="tip">&#128161; <b>Tip:</b> For the fastest and most accurate results, upload <b>Word (.docx)</b> files. PDF, Excel and image formats are also supported for exceptional cases.</div>
       <label class="single"><input type="checkbox" id="singleFile" onchange="toggleSingle()"> Both years are in a single file</label>
       <div class="zones">
         <div class="zone cy" id="zoneCY">
           <div class="zh">Current Year (CY) File</div>
           <div class="drop cy" id="dropCY">
             <div class="cloud">&#9729;</div><b>Drop Current Year file here</b>
-            <small>Supported: Excel (.xlsx), Word (.docx), PDF (.pdf), image</small><br>
+            <small>Best: Word (.docx). Also accepts PDF, Excel, image.</small><br>
             <button class="browse" onclick="document.getElementById('inCY').click()">Browse Files</button>
             <div class="fname" id="nameCY"></div>
             <input type="file" id="inCY" style="display:none" accept=".xlsx,.xls,.docx,.pdf,.png,.jpg,.jpeg" onchange="setName('CY')">
@@ -208,7 +212,7 @@ footer{background:var(--header);color:#c6d2df;margin-top:34px;}
           <div class="zh">Previous Year (PY) File</div>
           <div class="drop py" id="dropPY">
             <div class="cloud">&#9729;</div><b>Drop Previous Year file here</b>
-            <small>Supported: Excel (.xlsx), Word (.docx), PDF (.pdf), image</small><br>
+            <small>Best: Word (.docx). Also accepts PDF, Excel, image.</small><br>
             <button class="browse" onclick="document.getElementById('inPY').click()">Browse Files</button>
             <div class="fname" id="namePY"></div>
             <input type="file" id="inPY" style="display:none" accept=".xlsx,.xls,.docx,.pdf,.png,.jpg,.jpeg" onchange="setName('PY')">
