@@ -23,6 +23,18 @@ def _client():
     return anthropic.Anthropic(api_key=key)
 
 
+def _pdf_to_text(data: bytes) -> str:
+    """Extract text from a (typed/clean) PDF server-side so we send light text to
+    Claude instead of the whole base64 file. Keeps memory low (free-tier friendly)."""
+    try:
+        import io
+        from pypdf import PdfReader
+        r = PdfReader(io.BytesIO(data))
+        return "\n".join((pg.extract_text() or "") for pg in r.pages)
+    except Exception:
+        return ""
+
+
 def _content_blocks(files: List[Tuple[str, bytes]]) -> list:
     """Turn uploaded files into Claude content blocks.
     PDFs → document blocks; images → image blocks; text/csv/xlsx-text → text."""
@@ -30,12 +42,18 @@ def _content_blocks(files: List[Tuple[str, bytes]]) -> list:
     for name, data in files:
         ext = name.lower().rsplit(".", 1)[-1] if "." in name else ""
         if ext == "pdf":
-            blocks.append({
-                "type": "document",
-                "source": {"type": "base64", "media_type": "application/pdf",
-                           "data": base64.b64encode(data).decode()},
-                "title": name,
-            })
+            text = _pdf_to_text(data)
+            if text and len(text.strip()) >= 200:
+                # typed/clean PDF -> send extracted text (light on memory & tokens)
+                blocks.append({"type": "text", "text": f"[Statement from PDF {name}]\n" + text})
+            else:
+                # scanned/image PDF -> fall back to the full document (vision)
+                blocks.append({
+                    "type": "document",
+                    "source": {"type": "base64", "media_type": "application/pdf",
+                               "data": base64.b64encode(data).decode()},
+                    "title": name,
+                })
         elif ext in ("png", "jpg", "jpeg", "gif", "webp"):
             mt = "image/jpeg" if ext in ("jpg", "jpeg") else f"image/{ext}"
             blocks.append({
