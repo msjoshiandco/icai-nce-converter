@@ -19,11 +19,12 @@ from typing import Dict, Tuple, List
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.properties import PageSetupProperties
 
 from models import Payload, Note
 
 FONT_NAME = "Calibri Light"
-NUMFMT = '(* #,##0.00);(* (#,##0.00);(* "-"??);(@_)'
+NUMFMT = '#,##0.00;(#,##0.00)'
 
 # ---- Schedule III mapping ---------------------------------------------------
 # Balance-sheet line plan: (section_header, [(sub_label, note_key), ...])
@@ -148,41 +149,49 @@ class Engine:
     # ========================================================================
     def build(self) -> bytes:
         self.compute_retained()
-        # remove default sheet, create in order
         self.wb.remove(self.wb.active)
         self.ws_notes = self.wb.create_sheet("Notes")
         self.ws_bs = self.wb.create_sheet("Balance Sheet")
         self.ws_pl = self.wb.create_sheet("Statement of P&L")
         self.ws_idx = self.wb.create_sheet("Index")
-        # build notes first so anchors exist, then BS/PL reference them
+        self.ws_cap = self.wb.create_sheet("Capital Account") if "capital" in self.note_no else None
+        self.ws_ppe = self.wb.create_sheet("PPE Schedule") if "ppe" in self.note_no else None
+        if self.ws_cap is not None:
+            self.build_capital_sheet(self.note_no["capital"])
+        if self.ws_ppe is not None:
+            self.build_ppe_sheet(self.note_no["ppe"])
         self.build_notes()
         self.build_balance_sheet()
         self.build_pl()
         self.build_index()
-        # order: Index, BS, PL, Notes
-        self.wb.move_sheet("Index", -(self.wb.sheetnames.index("Index")))
         self._reorder()
         self._no_gridlines()
-        data = self._save_with_theme_patch()
-        return data
+        return self._save_with_theme_patch()
 
     def _reorder(self):
-        order = ["Index", "Balance Sheet", "Statement of P&L", "Notes"]
-        self.wb._sheets.sort(key=lambda s: order.index(s.title))
+        order = ["Index", "Balance Sheet", "Statement of P&L", "Notes",
+                 "Capital Account", "PPE Schedule"]
+        self.wb._sheets.sort(key=lambda s: order.index(s.title) if s.title in order else 99)
 
     def _no_gridlines(self):
         for ws in self.wb.worksheets:
             ws.sheet_view.showGridLines = False
 
+    def _landscape(self, ws):
+        ws.page_setup.orientation = "landscape"
+        ws.page_setup.fitToWidth = 1
+        ws.page_setup.fitToHeight = 0
+        ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
+        ws.page_margins.left = ws.page_margins.right = 0.3
+
     # -- title block ----------------------------------------------------------
-    def title_block(self, ws, desc, as_at=True):
+    def title_block(self, ws, desc, span=6):
         e = self.p.entity
-        last = max(6, ws.max_column)
         self.cell(ws, 1, 1, e.name, bold=True, center=True)
-        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=6)
+        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=span)
         self.cell(ws, 2, 1, desc, bold=True, center=True)
-        ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=6)
-        self.cell(ws, 3, 6, "(Amount in Rs.)", italic=True, right=True)
+        ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=span)
+        self.cell(ws, 3, span, "(Amount in Rs.)", italic=True, right=True)
 
     # -- NOTES ----------------------------------------------------------------
     def build_notes(self):
@@ -191,16 +200,13 @@ class Engine:
             ws.column_dimensions[w].width = wd
         self.title_block(ws, "Notes forming part of the Financial Statements")
         r = 5
-        cyl, pyl = self.p.entity.cy_label, self.p.entity.py_label
         for key in self.retained:
+            if key in ("capital", "ppe"):
+                continue  # rendered on their own dedicated sheets
             num = self.note_no[key]
-            if key == "capital":
-                r = self._note_capital(ws, r, num)
-            elif key == "ppe":
-                r = self._note_ppe(ws, r, num)
-            elif key in ("entity", "policies", "prev_year", "rounding",
-                         "segment", "related_party", "contingent", "msmed",
-                         "forex", "confirmation", "dtl", "dta"):
+            if key in ("entity", "policies", "prev_year", "rounding",
+                       "segment", "related_party", "contingent", "msmed",
+                       "forex", "confirmation", "dtl", "dta"):
                 r = self._note_prose(ws, r, num, key)
             else:
                 r = self._note_standard(ws, r, num, key)
@@ -289,72 +295,76 @@ class Engine:
             "prev_year": "Previous year figures have been regrouped / reclassified wherever necessary to conform to the current year's presentation.",
         }.get(key, "—")
 
-    # -- Capital note ---------------------------------------------------------
-    def _note_capital(self, ws, r, num):
+    # -- Capital Account (own landscape sheet) -------------------------------
+    def build_capital_sheet(self, num):
+        ws = self.ws_cap
+        self._landscape(ws)
         if self.firm:
-            return self._note_partners(ws, r, num)
-        return self._note_owner(ws, r, num)
+            self._capital_partners(ws, num)
+        else:
+            self._capital_owner(ws, num)
 
-    def _note_owner(self, ws, r, num):
+    def _footnotes_wide(self, ws, r, note, span):
+        for fn in note.footnotes:
+            self.cell(ws, r, 2, fn, italic=True, wrap=True)
+            ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=span)
+            ws.row_dimensions[r].height = max(15 * ((len(fn) // 130) + 1), 15)
+            r += 1
+        return r
+
+    def _capital_owner(self, ws, num):
         oc = self.p.owner_capital
-        title = "Owner's Capital Account"
-        self.cell(ws, r, 1, f"Note {num}", bold=True)
-        self.cell(ws, r, 2, title, bold=True)
-        r += 1
-        heads = ["Particulars", "Opening", "Introduced", "Net Profit",
-                 "Interest", "Withdrawals", "Closing"]
+        for w, wd in {"A": 3, "B": 30, "C": 16, "D": 16, "E": 17, "F": 16, "G": 16, "H": 17}.items():
+            ws.column_dimensions[w].width = wd
+        self.title_block(ws, f"Note {num} \u2014 Owner's Capital Account", span=8)
+        heads = ["Particulars", "Opening\nBalance", "Capital\nIntroduced",
+                 "Net Profit\nfor the year", "Interest on\nCapital", "Withdrawals", "Closing\nBalance"]
+        r = 5
         for j, h in enumerate(heads):
-            self.cell(ws, r, 2 + j, h, bold=True, center=(j > 0), top=True, bottom=True)
+            self.cell(ws, r, 2 + j, h, bold=True, center=(j > 0), wrap=True, top=True, bottom=True)
+        ws.row_dimensions[r].height = 30
         r += 1
-        # CY row
-        def row(label, opening, intro, npf, interest, wd, profit_anchor):
-            self.cell(ws, r0, 2, label)
-            self.cell(ws, r0, 3, round(opening, 2), num=True)
-            self.cell(ws, r0, 4, round(intro, 2), num=True)
-            self.cell(ws, r0, 5, profit_anchor, num=True)
-            self.cell(ws, r0, 6, round(interest, 2), num=True)
-            self.cell(ws, r0, 7, round(wd, 2), num=True)
-            self.cell(ws, r0, 8, f"=C{r0}+D{r0}+E{r0}+F{r0}-G{r0}", num=True, bold=True)
-        r0 = r
-        row(f"{oc.name} — {self.p.entity.cy_label}", oc.opening_cy, oc.introduced_cy,
-            "=net_profit_cy", oc.interest_cy, oc.withdrawals_cy, None)
-        self.cell(ws, r0, 5, "='Statement of P&L'!__NPCY__", num=True)  # placeholder, fixed later
-        self.anchor["capital_close_cy"] = f"Notes!H{r0}"
+        def caprow(label, opening, intro, npref, interest, wd):
+            self.cell(ws, r, 2, label)
+            self.cell(ws, r, 3, round(opening, 2), num=True)
+            self.cell(ws, r, 4, round(intro, 2), num=True)
+            self.cell(ws, r, 5, npref, num=True)
+            self.cell(ws, r, 6, round(interest, 2), num=True)
+            self.cell(ws, r, 7, round(wd, 2), num=True)
+            self.cell(ws, r, 8, f"=C{r}+D{r}+E{r}+F{r}-G{r}", num=True, bold=True)
+        caprow(f"As at {self.p.entity.cy_label}", oc.opening_cy, oc.introduced_cy,
+               "='Statement of P&L'!__NPCY__", oc.interest_cy, oc.withdrawals_cy)
+        self.anchor["note_capital_cy"] = f"Capital Account!H{r}"
         r += 1
-        r0 = r
-        row(f"{oc.name} — {self.p.entity.py_label}", oc.opening_py, oc.introduced_py,
-            "=net_profit_py", oc.interest_py, oc.withdrawals_py, None)
-        self.cell(ws, r0, 5, "='Statement of P&L'!__NPPY__", num=True)
-        self.anchor["capital_close_py"] = f"Notes!H{r0}"
-        # BS capital anchors point to closing cells
-        self.anchor["note_capital_cy"] = self.anchor["capital_close_cy"]
-        self.anchor["note_capital_py"] = self.anchor["capital_close_py"]
-        r += 1
-        sub = self.p.note("capital")
-        note = sub if sub else Note(key="capital", title=title)
-        note.footnotes = note.footnotes or [
-            "Capital is maintained under the fluctuating capital method; a separate Current Account is not maintained."]
-        r = self._footnotes(ws, r, note)
-        return r + 1
+        caprow(f"As at {self.p.entity.py_label}", oc.opening_py, oc.introduced_py,
+               "='Statement of P&L'!__NPPY__", oc.interest_py, oc.withdrawals_py)
+        self.anchor["note_capital_py"] = f"Capital Account!H{r}"
+        r += 2
+        note = self.p.note("capital") or Note(key="capital", title="Owner's Capital Account")
+        if not note.footnotes:
+            note.footnotes = [
+                "Capital is maintained under the fluctuating capital method; a separate Current Account is not maintained.",
+                "Closing Balance = Opening + Capital Introduced + Net Profit + Interest on Capital - Withdrawals. Net Profit is linked to the Statement of Profit and Loss."]
+        self._footnotes_wide(ws, r, note, span=8)
 
-    def _note_partners(self, ws, r, num):
-        self.cell(ws, r, 1, f"Note {num}", bold=True)
-        self.cell(ws, r, 2, "Partners' Capital Account", bold=True)
-        r += 1
-        heads = ["Partner", "PSR%", "Opening", "Introduced", "Share of Profit",
-                 "Interest", "Remuneration", "Withdrawals", "Closing"]
+    def _capital_partners(self, ws, num):
+        for w, wd in {"A": 3, "B": 26, "C": 7, "D": 14, "E": 13, "F": 13, "G": 13, "H": 14, "I": 13, "J": 15}.items():
+            ws.column_dimensions[w].width = wd
+        self.title_block(ws, f"Note {num} \u2014 Partners' Capital Account", span=10)
+        heads = ["Partner", "PSR %", "Opening", "Capital\nIntroduced", "Share of\nProfit",
+                 "Interest on\nCapital", "Remuneration", "Withdrawals", "Closing\nBalance"]
+        r = 5
         for j, h in enumerate(heads):
-            self.cell(ws, r, 2 + j, h, bold=True, center=(j > 0), top=True, bottom=True)
+            self.cell(ws, r, 2 + j, h, bold=True, center=(j > 0), wrap=True, top=True, bottom=True)
+        ws.row_dimensions[r].height = 30
         r += 1
-
-        def block(year):
+        def block(year, label):
             nonlocal r
-            self.cell(ws, r, 2, f"As at {self.p.entity.cy_label if year=='cy' else self.p.entity.py_label}",
-                      italic=True)
+            self.cell(ws, r, 2, label, bold=True, italic=True)
             r += 1
             first = r
             for pt in self.p.partners:
-                g = lambda a: getattr(pt, f"{a}_{year}")
+                g = lambda a: getattr(pt, f"{a}_{year}") or 0
                 self.cell(ws, r, 2, pt.name)
                 self.cell(ws, r, 3, pt.psr, num=True)
                 self.cell(ws, r, 4, round(g("opening"), 2), num=True)
@@ -367,44 +377,46 @@ class Engine:
                 r += 1
             last = r - 1
             self.cell(ws, r, 2, "Total", bold=True)
-            self.cell(ws, r, 10, f"=SUM(J{first}:J{last})", bold=True, num=True, top=True)
-            tot = f"Notes!J{r}"
-            r += 1
+            for col in (4, 5, 6, 7, 8, 9, 10):
+                L = get_column_letter(col)
+                self.cell(ws, r, col, f"=SUM({L}{first}:{L}{last})", bold=True, num=True, top=True)
+            tot = f"Capital Account!J{r}"
+            r += 2
             return tot
-
-        cy_total = block("cy")
-        py_total = block("py")
-        self.anchor["note_capital_cy"] = cy_total
-        self.anchor["note_capital_py"] = py_total
-        sub = self.p.note("capital")
-        note = sub if sub else Note(key="capital", title="Partners' Capital Account")
+        cy = block("cy", f"As at {self.p.entity.cy_label}")
+        py = block("py", f"As at {self.p.entity.py_label}")
+        self.anchor["note_capital_cy"] = cy
+        self.anchor["note_capital_py"] = py
+        note = self.p.note("capital") or Note(key="capital", title="Partners' Capital Account")
         if not note.footnotes:
             note.footnotes = [
                 "Capital is maintained under the fluctuating capital method (one account per partner).",
                 "Withdrawals include actual drawings; prior-year tax paid during the year is routed through Withdrawals for comparability."]
-        r = self._footnotes(ws, r, note)
-        return r + 1
+        self._footnotes_wide(ws, r, note, span=10)
 
-    # -- PPE note -------------------------------------------------------------
-    def _note_ppe(self, ws, r, num):
-        self.cell(ws, r, 1, f"Note {num}", bold=True)
-        self.cell(ws, r, 2, "Property, Plant and Equipment", bold=True)
-        r += 1
-        # super-group header row
-        self.cell(ws, r, 4, "GROSS BLOCK", bold=True, center=True)
-        ws.merge_cells(start_row=r, start_column=4, end_row=r, end_column=6)
-        self.cell(ws, r, 7, "ACCUMULATED DEPRECIATION", bold=True, center=True)
-        ws.merge_cells(start_row=r, start_column=7, end_row=r, end_column=9)
-        self.cell(ws, r, 10, "NET BLOCK", bold=True, center=True)
-        ws.merge_cells(start_row=r, start_column=10, end_row=r, end_column=11)
-        r += 1
+    # -- PPE Schedule (own landscape sheet) ----------------------------------
+    def build_ppe_sheet(self, num):
+        ws = self.ws_ppe
+        self._landscape(ws)
+        for w, wd in {"A": 4, "B": 30, "C": 14, "D": 13, "E": 14, "F": 14, "G": 13, "H": 14, "I": 14, "J": 14}.items():
+            ws.column_dimensions[w].width = wd
+        self.title_block(ws, f"Note {num} \u2014 Property, Plant and Equipment", span=10)
         cyl, pyl = self.p.entity.cy_label, self.p.entity.py_label
-        heads = ["Sr.", "Particulars", f"Opening\n{pyl}", "Additions",
-                 f"Closing\n{cyl}", f"Opening\n{pyl}", "For the year",
-                 f"Closing\n{cyl}", f"Net {cyl}", f"Net {pyl}"]
+        r = 5
+        # super-group header (correctly aligned to detail columns)
+        self.cell(ws, r, 3, "GROSS BLOCK", bold=True, center=True, top=True, bottom=True)
+        ws.merge_cells(start_row=r, start_column=3, end_row=r, end_column=5)
+        self.cell(ws, r, 6, "ACCUMULATED DEPRECIATION", bold=True, center=True, top=True, bottom=True)
+        ws.merge_cells(start_row=r, start_column=6, end_row=r, end_column=8)
+        self.cell(ws, r, 9, "NET BLOCK", bold=True, center=True, top=True, bottom=True)
+        ws.merge_cells(start_row=r, start_column=9, end_row=r, end_column=10)
+        r += 1
+        heads = ["Sr.", "Particulars", f"Opening\nas at 01.04", "Additions", f"Closing\nas at {cyl}",
+                 f"Opening\nas at 01.04", "For the\nyear", f"Closing\nas at {cyl}",
+                 f"Net Block\n{cyl}", f"Net Block\n{pyl}"]
         for j, h in enumerate(heads):
             self.cell(ws, r, 1 + j, h, bold=True, center=(j > 1), wrap=True, top=True, bottom=True)
-        ws.row_dimensions[r].height = 30
+        ws.row_dimensions[r].height = 46
         r += 1
         first = r
         for i, a in enumerate(self.p.ppe_assets, start=1):
@@ -416,28 +428,27 @@ class Engine:
             self.cell(ws, r, 6, round(a.accdep_open, 2), num=True)
             self.cell(ws, r, 7, round(a.dep_year, 2), num=True)
             self.cell(ws, r, 8, f"=F{r}+G{r}", num=True)
-            self.cell(ws, r, 9, f"=E{r}-H{r}", num=True)   # net CY
-            self.cell(ws, r, 10, f"=C{r}-F{r}", num=True)  # net PY
+            self.cell(ws, r, 9, f"=E{r}-H{r}", num=True)
+            self.cell(ws, r, 10, f"=C{r}-F{r}", num=True)
             r += 1
         last = r - 1
         self.cell(ws, r, 2, "Total", bold=True)
         for col in (3, 4, 5, 6, 7, 8, 9, 10):
             L = get_column_letter(col)
             self.cell(ws, r, col, f"=SUM({L}{first}:{L}{last})", bold=True, num=True, top=True)
-        self.anchor["note_ppe_cy"] = f"Notes!I{r}"   # net block CY
-        self.anchor["note_ppe_py"] = f"Notes!J{r}"   # net block PY
-        self.anchor["ppe_dep_year"] = f"Notes!G{r}"  # depreciation for the year
-        r += 1
+        self.anchor["note_ppe_cy"] = f"PPE Schedule!I{r}"
+        self.anchor["note_ppe_py"] = f"PPE Schedule!J{r}"
+        self.anchor["ppe_dep_year"] = f"PPE Schedule!G{r}"
+        r += 2
         note = self.p.note("ppe") or Note(key="ppe", title="Property, Plant and Equipment")
         fns = list(note.footnotes)
         if self.p.depreciation_case == "A":
             fns.append("Depreciation has not been provided in the books; fixed-asset balances are carried at cost as gross block. The impact of non-provision has not been ascertained.")
-        fns.append("No revaluation of assets was carried out during the year.")
-        fns.append("There are no intangible assets, capital work-in-progress or intangible assets under development.")
-        fns.append("All assets are owned by the entity and are free from charge except as disclosed.")
+        fns += ["No revaluation of assets was carried out during the year.",
+                "There are no intangible assets, capital work-in-progress or intangible assets under development.",
+                "All assets are owned by the entity and are free from charge except as disclosed."]
         note.footnotes = fns
-        r = self._footnotes(ws, r, note)
-        return r + 1
+        self._footnotes_wide(ws, r, note, span=10)
 
     # -- BALANCE SHEET --------------------------------------------------------
     def build_balance_sheet(self):
@@ -608,8 +619,8 @@ class Engine:
         # Owner capital placeholders were written as formulas with __NPCY__/__NPPY__
         np_cy = self.anchor.get("np_cy")
         np_py = self.anchor.get("np_py")
-        if not self.firm and np_cy:
-            ws = self.ws_notes
+        if not self.firm and np_cy and getattr(self, "ws_cap", None) is not None:
+            ws = self.ws_cap
             for row in ws.iter_rows():
                 for c in row:
                     if isinstance(c.value, str) and "__NPCY__" in c.value:
@@ -626,9 +637,14 @@ class Engine:
         self.cell(ws, 4, 2, "Contents", bold=True)
         self.cell(ws, 4, 3, "Reference", bold=True, center=True)
         r = 5
-        for label, sheet in [("Balance Sheet", "Balance Sheet"),
-                             ("Statement of Profit and Loss", "Statement of P&L"),
-                             ("Notes to the Financial Statements", "Notes")]:
+        nav = [("Balance Sheet", "Balance Sheet"),
+               ("Statement of Profit and Loss", "Statement of P&L"),
+               ("Notes to the Financial Statements", "Notes")]
+        if getattr(self, "ws_cap", None) is not None:
+            nav.append((f"Note {self.note_no['capital']} - Capital Account", "Capital Account"))
+        if getattr(self, "ws_ppe", None) is not None:
+            nav.append((f"Note {self.note_no['ppe']} - Property, Plant and Equipment", "PPE Schedule"))
+        for label, sheet in nav:
             c = self.cell(ws, r, 2, label)
             c.hyperlink = f"#'{sheet}'!A1"
             c.font = self._f(color="0563C1")
