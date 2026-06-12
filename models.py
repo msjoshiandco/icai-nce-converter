@@ -167,6 +167,24 @@ class PLMeta:
 
 
 @dataclass
+class Controls:
+    """Source control totals read directly from the printed source statements.
+    Used by the reconciliation engine to assert the converted output matches source."""
+    bs_total_cy: float = 0.0          # source Balance Sheet grand total (CY)
+    bs_total_py: float = 0.0
+    capital_close_cy: float = 0.0     # source closing capital on the BS (CY); firm = total of all partners
+    capital_close_py: float = 0.0
+    net_profit_cy: float = 0.0        # source Net Profit per the P&L (CY) (pre-regrouping)
+    net_profit_py: float = 0.0
+    opening_stock_cy: float = 0.0     # trading account opening stock (CY)
+    opening_stock_py: float = 0.0
+    closing_stock_cy: float = 0.0
+    closing_stock_py: float = 0.0
+    purchases_cy: float = 0.0
+    purchases_py: float = 0.0
+
+
+@dataclass
 class Payload:
     entity: EntityInfo = field(default_factory=EntityInfo)
     notes: List[Note] = field(default_factory=list)
@@ -176,6 +194,7 @@ class Payload:
     depreciation_case: str = "A"
     firm_tax: Optional[FirmTax] = None
     pl: PLMeta = field(default_factory=PLMeta)
+    controls: Controls = field(default_factory=Controls)
 
     def note(self, key: str) -> Optional[Note]:
         for n in self.notes:

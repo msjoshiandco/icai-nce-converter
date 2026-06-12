@@ -78,18 +78,41 @@ async def api_extract(constitution: str = Form(...),
     for f in files:
         payload_files.append((f.filename, await f.read()))
     try:
-        from llm import extract_payload
+        from llm import extract_payload, reconcile_and_correct
+        import reconcile as rec
         payload = extract_payload(constitution, payload_files, extra)
+        payload, discrepancies, fixes = reconcile_and_correct(constitution, payload_files, payload)
     except Exception as e:
         raise HTTPException(500, f"Extraction failed: {e}")
-    return JSONResponse(asdict(payload))
+    return JSONResponse({
+        "payload": asdict(payload),
+        "reconciliation": {
+            "passed": len(discrepancies) == 0,
+            "discrepancies": discrepancies,
+            "fixes": fixes,
+            "report": rec.report_text(discrepancies),
+        },
+    })
 
 
 @app.post("/api/generate")
 async def api_generate(payload: dict, x_access_code: str = Header(None)):
     require_code(x_access_code)
+    import reconcile as rec
     try:
         p = Payload.parse(payload)
+    except Exception as e:
+        raise HTTPException(400, f"Invalid payload: {e}")
+    discrepancies = rec.reconcile(p)
+    if discrepancies:
+        # ZERO TOLERANCE: never ship a non-reconciling workbook
+        raise HTTPException(status_code=422, detail={
+            "error": "RECONCILIATION_FAILED",
+            "message": "The figures do not reconcile to the source. No workbook produced.",
+            "discrepancies": discrepancies,
+            "report": rec.report_text(discrepancies),
+        })
+    try:
         data = build_workbook(p)
     except Exception as e:
         raise HTTPException(400, f"Build failed: {e}")

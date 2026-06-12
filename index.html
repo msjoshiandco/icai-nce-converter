@@ -121,6 +121,12 @@ footer{background:var(--header);color:#c6d2df;margin-top:34px;}
 .copy{text-align:center;padding:15px 16px;border-top:1px solid #25405a;font-size:12px;color:#94a2b3;line-height:1.8;}
 .copy b{color:#fff;}
 @media(max-width:780px){.choices,.zones,.grid3,.grid2,.foot{grid-template-columns:1fr;}}
+.recon{max-width:760px;margin:6px auto 0;border:1px solid #e7c9c9;background:#fdf3f3;border-radius:12px;padding:14px 18px;text-align:left;font-size:13.5px;color:#7a2e2e;display:none;}
+.recon.show{display:block;}
+.recon.pass{border-color:#bfe3cf;background:#f1faf4;color:#1a6b3f;}
+.recon h4{margin:0 0 8px;font-size:14px;}
+.recon ul{margin:6px 0 0;padding-left:18px;}
+.recon li{margin:3px 0;}
 </style>
 </head>
 <body>
@@ -227,6 +233,7 @@ footer{background:var(--header);color:#c6d2df;margin-top:34px;}
 
   <div class="convert-wrap"><button class="convert" id="convertBtn" onclick="convert()">Convert to ICAI NCE Format — Download Excel</button></div>
   <div id="status"></div>
+  <div id="reconReport"></div>
 
   <details class="review card" style="padding:16px 22px">
     <summary>Advanced — correct figures manually (Optional)</summary>
@@ -314,11 +321,23 @@ async function verifyCode(){
   catch(e){tag.textContent='Could not verify';tag.style.color='#c0392b';}}
 async function buildAndDownload(payload){
   var r=await fetch('/api/generate',{method:'POST',headers:codeHeaders({'Content-Type':'application/json'}),body:JSON.stringify(payload)});
-  if(!r.ok){throw new Error(await r.text());}
+  if(!r.ok){
+    var et=await r.text();
+    try{var ej=JSON.parse(et); if(ej.detail && ej.detail.report){ showRecon({passed:false,report:ej.detail.report,discrepancies:ej.detail.discrepancies},false); throw new Error('Reconciliation failed — see report.'); }}catch(_){}
+    throw new Error(et);
+  }
   var blob=await r.blob();var cd=r.headers.get('Content-Disposition')||'';var m=cd.match(/filename="([^"]+)"/);
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=m?m[1]:'ICAI_NCE.xlsx';a.click();}
+function showRecon(recon,passed){
+  var el=document.getElementById('reconReport'); if(!el)return;
+  if(!recon){el.className='recon';el.innerHTML='';return;}
+  if(passed){el.className='recon pass show';el.innerHTML='<h4>\u2713 Reconciled to source</h4>Total Assets = Total Liabilities = source Balance Sheet; capital and profit tie to the source. No differences.';return;}
+  var items=(recon.discrepancies||[]).map(function(x){return '<li>'+x.check+' ['+x.year+']: expected '+Number(x.expected).toLocaleString('en-IN',{minimumFractionDigits:2})+', got '+Number(x.got).toLocaleString('en-IN',{minimumFractionDigits:2})+', difference '+Number(x.diff).toLocaleString('en-IN',{minimumFractionDigits:2})+'</li>';}).join('');
+  el.className='recon show';
+  el.innerHTML='<h4>\u26A0 Reconciliation failed \u2014 no workbook produced</h4>The converted figures do not tie to the source. Differences:<ul>'+items+'</ul><div style="margin-top:8px">Please re-check the source files (or use the Advanced panel to correct), then convert again. Nothing is delivered until it reconciles exactly.</div>';
+}
 async function convert(){
-  if(!val('accessCode')){setStatus('Please enter your access code above before converting.','err');return;}
+  showRecon(null,false); if(!val('accessCode')){setStatus('Please enter your access code above before converting.','err');return;}
   var single=document.getElementById('singleFile').checked;
   var cy=document.getElementById('inCY').files[0];var py=document.getElementById('inPY').files[0];
   if(!cy){setStatus('Please upload the Current Year file.','err');return;}
@@ -330,10 +349,18 @@ async function convert(){
   try{
     var r=await fetch('/api/extract',{method:'POST',headers:codeHeaders(),body:fd});
     if(!r.ok){throw new Error(await r.text());}
-    var data=await r.json();applyClient(data);
+    var resp=await r.json();
+    var data=resp.payload||resp; var recon=resp.reconciliation;
+    applyClient(data);
     document.getElementById('json').value=JSON.stringify(data,null,2);
+    if(recon && recon.passed===false){
+      showRecon(recon,false);
+      setStatus('Reconciliation FAILED — no workbook was produced. See the differences below.','err');
+      document.getElementById('convertBtn').disabled=false; return;
+    }
+    showRecon(recon,true);
     await buildAndDownload(data);
-    setStatus('Done. Your ICAI NCE workbook has been downloaded.','ok');
+    setStatus('Done. Statements reconciled to source; workbook downloaded.','ok');
   }catch(e){setStatus('Conversion failed: '+cleanErr(e.message),'err');}
   document.getElementById('convertBtn').disabled=false;}
 async function generateFromJson(){

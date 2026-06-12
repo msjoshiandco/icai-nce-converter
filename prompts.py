@@ -35,7 +35,15 @@ Return ONE JSON object, no prose, with this shape:
      {"name": str, "rate": str, "gb_open": n, "additions": n, "accdep_open": n, "dep_year": n}
   ],
   "depreciation_case": "A"|"B",
-  "firm_tax": {"current_tax_cy": n, "current_tax_py": n, "restatement_note": str}  // partnership ONLY
+  "firm_tax": {"current_tax_cy": n, "current_tax_py": n, "restatement_note": str}  // partnership ONLY,
+  "controls": {                 // MANDATORY - read directly from the printed source
+     "bs_total_cy": n, "bs_total_py": n,
+     "capital_close_cy": n, "capital_close_py": n,
+     "net_profit_cy": n, "net_profit_py": n,
+     "opening_stock_cy": n, "opening_stock_py": n,
+     "closing_stock_cy": n, "closing_stock_py": n,
+     "purchases_cy": n, "purchases_py": n
+  }
 }
 
 Valid note keys (Schedule III order):
@@ -111,6 +119,15 @@ CRITICAL COMPUTATION RULES (these make the Balance Sheet tally — get them righ
   Other Income) + Interest on own capital - Withdrawals. If your closing does not equal the
   source Balance Sheet capital, you have an error - re-check the inventory netting and the
   interest field, and fix the figures so it reconciles. The whole Balance Sheet must tally.
+- CONTROL TOTALS (the "controls" object is MANDATORY): copy these numbers DIRECTLY from
+  the printed source statements - do NOT reconstruct or compute them:
+  * bs_total_cy / bs_total_py = the grand TOTAL of the source Balance Sheet for each year.
+  * capital_close_cy / capital_close_py = the closing Capital / Owner's Funds figure shown
+    on the source Balance Sheet (for a firm, the TOTAL of all partners' closing balances).
+  * net_profit_cy / net_profit_py = Net Profit as printed in the source Profit & Loss.
+  * opening_stock, closing_stock, purchases (per year) = from the Trading Account.
+  A downstream engine uses these to verify the conversion reconciles to source EXACTLY;
+  if your line items do not reconcile to these control totals the conversion is REJECTED.
 """
 
 PROP = r"""
@@ -146,3 +163,24 @@ CONSTITUTION: PARTNERSHIP FIRM.
 def system_prompt(constitution: str) -> str:
     block = PROP if constitution == "proprietorship" else PARTNERSHIP
     return COMMON + "\n" + block + "\n" + JSON_CONTRACT
+
+
+
+CORRECTION_INSTRUCTION = """
+The previous extraction did NOT reconcile to the source. A deterministic reconciliation
+engine found the following differences (each is a hard failure):
+
+{discrepancies}
+
+Re-examine the SOURCE statements and the current JSON below. Fix the figures so that, for
+BOTH years: Total Assets = Total Liabilities = the source Balance Sheet total; the Capital
+closing balance equals the source Balance Sheet capital; Net Profit = Total Income - Total
+Expenses with inventory netted exactly once; and (for a firm) the appropriation ties and
+the tax-restatement chain holds. Do NOT use plug figures or forced balances - find and
+correct the real classification/computation error.
+
+Return the COMPLETE corrected JSON object (same schema), nothing else.
+
+CURRENT JSON:
+{current_json}
+"""
