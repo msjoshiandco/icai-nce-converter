@@ -35,6 +35,21 @@ def _pdf_to_text(data: bytes) -> str:
         return ""
 
 
+def _docx_to_text(data: bytes) -> str:
+    """Extract text (with table structure) from a .docx, stdlib only. Very light
+    on memory and very reliable for typed statements - tables become tab/newline
+    separated text that Claude reads cleanly."""
+    try:
+        import io, zipfile, re, html
+        with zipfile.ZipFile(io.BytesIO(data)) as z:
+            xml = z.read("word/document.xml").decode("utf-8", "ignore")
+        xml = xml.replace("</w:tc>", "\t").replace("</w:tr>", "\n").replace("</w:p>", "\n")
+        xml = re.sub(r"<[^>]+>", "", xml)
+        return html.unescape(xml)
+    except Exception:
+        return ""
+
+
 def _content_blocks(files: List[Tuple[str, bytes]]) -> list:
     """Turn uploaded files into Claude content blocks.
     PDFs → document blocks; images → image blocks; text/csv/xlsx-text → text."""
@@ -61,6 +76,8 @@ def _content_blocks(files: List[Tuple[str, bytes]]) -> list:
                 "source": {"type": "base64", "media_type": mt,
                            "data": base64.b64encode(data).decode()},
             })
+        elif ext == "docx":
+            blocks.append({"type": "text", "text": f"[Statement from Word {name}]\n" + _docx_to_text(data)})
         elif ext in ("xlsx", "xls"):
             blocks.append({"type": "text", "text": f"[Spreadsheet {name}]\n" + _xlsx_to_text(data)})
         else:  # txt, csv, md, docx-text fallback
