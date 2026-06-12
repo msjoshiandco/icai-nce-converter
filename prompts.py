@@ -89,6 +89,28 @@ UNIVERSAL RULES
   an entity footnote "WARNING: depreciation chart required".
 - Previous Year Figures and Rounding-off notes are always present.
 - Do NOT invent figures. Do NOT create disclosures without basis.
+
+CRITICAL COMPUTATION RULES (these make the Balance Sheet tally — get them right):
+- INVENTORY (never double-count): the stock movement must pass through EXACTLY ONE
+  expense head. Preferred: set cost_materials = Opening Stock + Purchases - Closing
+  Stock, and OMIT the changes_inventory note (or set it to 0). Alternative: keep
+  cost_materials = Purchases only, and set changes_inventory = Opening Stock - Closing
+  Stock (a SUBTRACTION; it may be negative). NEVER add opening and closing stock
+  together. NEVER enter closing stock as a positive expense. Closing stock is an ASSET
+  (inventories), not an expense.
+- OTHER INCOME vs CAPITAL INTEREST: bank interest, FD interest and dividend received are
+  OTHER INCOME and are already inside Net Profit. The owner_capital "interest" field (and a
+  partner's "interest" field) means INTEREST ON THE OWNER'S/PARTNER'S OWN CAPITAL only -
+  it is NOT bank/FD interest. For a proprietorship set interest_cy/interest_py = 0 unless
+  the source explicitly credits interest on the proprietor's capital.
+- NET PROFIT must equal Total Income (Revenue + Other Income) minus Total Expenses with
+  inventory netted once.
+- CAPITAL CLOSING SELF-CHECK (mandatory): the closing balance of owner_capital (and the sum
+  of partners' closings) MUST equal the Capital / Owner's Funds figure shown on the SOURCE
+  Balance Sheet for that year. Closing = Opening + Capital Introduced + Net Profit (incl.
+  Other Income) + Interest on own capital - Withdrawals. If your closing does not equal the
+  source Balance Sheet capital, you have an error - re-check the inventory netting and the
+  interest field, and fix the figures so it reconciles. The whole Balance Sheet must tally.
 """
 
 PROP = r"""
