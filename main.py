@@ -15,7 +15,7 @@ import io, json, os
 from dataclasses import asdict
 from typing import List
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Header
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -23,6 +23,20 @@ from models import Payload
 from builder import build_workbook
 
 app = FastAPI(title="ICAI NCE Conversion Tool", version="1.0.0")
+
+
+def valid_codes():
+    """Access codes are managed via the ACCESS_CODES env var (comma-separated),
+    shared with the genius-tb-tool. Default 'genius2025' for parity."""
+    raw = os.environ.get("ACCESS_CODES", "genius2025")
+    return {c.strip() for c in raw.split(",") if c.strip()}
+
+
+def require_code(code):
+    if not code or code.strip() not in valid_codes():
+        raise HTTPException(401, "Invalid or inactive access code. Please contact "
+                                 "M S Joshi & Co. (connect@msjc.in) for access.")
+    return code.strip()
 
 HERE = os.path.dirname(__file__)
 STATIC_DIR = HERE
@@ -32,7 +46,7 @@ if os.path.isdir(STATIC_DIR):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "llm_configured": bool(os.environ.get("ANTHROPIC_API_KEY"))}
+    return {"status": "ok", "llm_configured": bool(os.environ.get("ANTHROPIC_API_KEY")), "codes_configured": bool(os.environ.get("ACCESS_CODES"))}
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -43,10 +57,18 @@ def index():
     return HTMLResponse("<h1>ICAI NCE Conversion Tool</h1><p>UI not found.</p>")
 
 
+@app.post("/api/verify")
+def api_verify(x_access_code: str = Header(None)):
+    require_code(x_access_code)
+    return {"valid": True}
+
+
 @app.post("/api/extract")
 async def api_extract(constitution: str = Form(...),
                       extra: str = Form(""),
-                      files: List[UploadFile] = File(...)):
+                      files: List[UploadFile] = File(...),
+                      x_access_code: str = Header(None)):
+    require_code(x_access_code)
     if constitution not in ("proprietorship", "partnership"):
         raise HTTPException(400, "constitution must be 'proprietorship' or 'partnership'")
     if not os.environ.get("ANTHROPIC_API_KEY"):
@@ -64,7 +86,8 @@ async def api_extract(constitution: str = Form(...),
 
 
 @app.post("/api/generate")
-async def api_generate(payload: dict):
+async def api_generate(payload: dict, x_access_code: str = Header(None)):
+    require_code(x_access_code)
     try:
         p = Payload.parse(payload)
         data = build_workbook(p)

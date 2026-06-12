@@ -5,83 +5,120 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>ICAI NCE Financial Statement Converter — M S Joshi &amp; Co.</title>
 <style>
-:root{--navy:#1f2f63;--navy2:#27407a;--blue:#1f6fe0;--blue2:#0b57d0;--green:#1c8a5a;--teal:#0f8a9b;--orange:#e8662a;--ink:#1c2430;--muted:#64707e;--line:#e2e8f0;--bg:#eaf2f8;--card:#fff;--dark:#1f2430;}
-*{box-sizing:border-box;font-family:"Nunito","Segoe UI",Calibri,Arial,sans-serif;}
-body{margin:0;background:var(--bg);color:var(--ink);}
+:root{
+  --header:#15293c; --header2:#1d3a52; --band:#19324a;
+  --bg:#f4f7fb; --card:#ffffff; --line:#e7edf4;
+  --ink:#2a3645; --muted:#6b7888; --heading:#1c3350;
+  --teal:#0e7c86; --teal2:#0b6670; --amber:#cf8a3c; --amber2:#bd7526;
+  --cy:#2b6aa6; --py:#2e8a66;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Calibri Light","Segoe UI",Calibri,Arial,sans-serif;line-height:1.55;}
+h1,h2,h3,h4,.hd{font-family:"Calibri","Segoe UI Semibold","Segoe UI",Arial,sans-serif;}
 a{color:var(--teal);text-decoration:none;}
-.topbar{background:#fff;text-align:center;padding:20px 20px 14px;border-bottom:1px solid var(--line);border-top:4px solid var(--orange);}
-.logo{max-height:86px;max-width:90%;}
+a:hover{text-decoration:underline;}
+
+.topbar{background:#fff;text-align:center;padding:22px 20px 16px;border-top:4px solid var(--amber);box-shadow:0 1px 0 var(--line);}
+.logo{max-height:88px;max-width:92%;}
 .logo-fallback{display:none;}
-.logo-fallback h1{margin:0;font-size:30px;font-weight:900;color:var(--navy);letter-spacing:1px;}
-.logo-fallback p{margin:2px 0 0;font-size:14px;font-weight:800;color:#7a7f5a;letter-spacing:3px;text-transform:uppercase;}
+.logo-fallback h1{margin:0;font-size:30px;font-weight:800;color:var(--heading);letter-spacing:.5px;}
+.logo-fallback p{margin:2px 0 0;font-size:14px;font-weight:700;color:#8a8f6e;letter-spacing:3px;text-transform:uppercase;}
 .logo-fallback small{color:var(--muted);font-size:11px;}
-.badge{display:inline-block;margin-top:12px;background:linear-gradient(90deg,#0f8a9b,#1f6fe0);color:#fff;
-  font-weight:800;font-size:12px;letter-spacing:1px;padding:7px 18px;border-radius:20px;text-transform:uppercase;}
-.banner{background:linear-gradient(180deg,var(--navy2),var(--navy));color:#fff;text-align:center;padding:18px 10px;
-  max-width:1120px;margin:18px auto 0;border-radius:12px;}
-.banner h2{margin:0;font-size:22px;font-weight:800;}
-.banner p{margin:5px 0 0;font-size:13px;opacity:.82;}
-main{max-width:1120px;margin:18px auto;padding:0 18px 60px;}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:20px;overflow:hidden;box-shadow:0 2px 6px rgba(20,40,80,.05);}
-.card.accent{border-left:5px solid var(--orange);}
-.card-head{background:var(--navy);color:#fff;padding:13px 20px;font-weight:800;font-size:15px;display:flex;align-items:center;gap:10px;}
-.pill{background:var(--blue2);color:#fff;border-radius:14px;font-size:12px;font-weight:800;padding:3px 12px;letter-spacing:.5px;}
-.card-body{padding:20px 22px;}
+.badge{display:inline-block;margin-top:12px;background:var(--teal);color:#fff;font-weight:700;font-size:12px;
+  letter-spacing:1.3px;padding:7px 20px;border-radius:22px;text-transform:uppercase;}
+
+.banner{background:linear-gradient(135deg,var(--header),var(--header2));color:#fff;text-align:center;
+  padding:22px 12px;max-width:1120px;margin:20px auto 0;border-radius:14px;box-shadow:0 8px 24px rgba(21,41,60,.18);}
+.banner h2{margin:0;font-size:23px;font-weight:700;letter-spacing:.3px;}
+.banner p{margin:6px 0 0;font-size:13px;opacity:.78;letter-spacing:.3px;}
+
+main{max-width:1120px;margin:20px auto;padding:0 18px 64px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:22px;overflow:hidden;
+  box-shadow:0 3px 10px rgba(28,51,80,.05);}
+.card-head{background:var(--band);color:#fff;padding:14px 22px;font-weight:700;font-size:15px;
+  display:flex;align-items:center;gap:10px;letter-spacing:.2px;}
+.card-head .req{margin-left:auto;background:var(--amber);color:#fff;border-radius:20px;font-size:11px;
+  font-weight:700;padding:3px 11px;letter-spacing:.5px;text-transform:uppercase;}
+.pill{background:var(--teal);color:#fff;border-radius:20px;font-size:12px;font-weight:700;padding:3px 13px;letter-spacing:.5px;}
+.card-body{padding:22px 24px;}
 .sub{color:var(--muted);font-size:14px;margin:0 0 16px;}
-.contact-row{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;}
-.contact-row .l{flex:1;min-width:240px;} .contact-row .r{font-size:13.5px;line-height:1.7;min-width:260px;}
-.contact-row .r b{color:var(--navy);}
+
+.contact-row{display:flex;justify-content:space-between;gap:22px;flex-wrap:wrap;align-items:center;}
+.contact-row .l{flex:1;min-width:240px;}
+.contact-row .r{font-size:13.5px;line-height:1.8;min-width:260px;}
+.contact-row .r b{color:var(--heading);}
+.card.accent{border-left:5px solid var(--amber);}
+
 .choices{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
-.choice{border:2px solid var(--line);border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:.15s;background:#fbfdff;position:relative;}
-.choice:hover{border-color:#b8c6db;}
-.choice.sel{border-color:var(--navy);background:#eef3fb;box-shadow:0 0 0 3px rgba(31,47,99,.10);}
-.choice.sel:after{content:"\2713";position:absolute;top:12px;right:14px;width:22px;height:22px;border-radius:50%;background:var(--navy);color:#fff;font-size:13px;line-height:22px;}
+.choice{border:2px solid var(--line);border-radius:14px;padding:26px;text-align:center;cursor:pointer;transition:.18s;background:#fafcff;position:relative;}
+.choice:hover{border-color:#c4d2e2;transform:translateY(-1px);}
+.choice.sel{border-color:var(--teal);background:#f0f8f8;box-shadow:0 0 0 3px rgba(14,124,134,.12);}
+.choice.sel:after{content:"\2713";position:absolute;top:12px;right:14px;width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;font-size:14px;line-height:24px;}
 .choice .ic{font-size:30px;margin-bottom:10px;}
-.choice h3{margin:0 0 4px;font-size:18px;color:var(--navy);}
+.choice h3{margin:0 0 4px;font-size:18px;color:var(--heading);font-weight:700;}
 .choice small{color:var(--muted);}
-.collap-head{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:16px 20px;font-weight:800;color:var(--navy);}
-.collap-body{padding:0 20px 20px;display:none;}
+
+.collap-head{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:16px 22px;font-weight:700;color:#fff;background:var(--band);font-size:15px;}
+.collap-head .pill{background:var(--teal);}
+.collap-body{padding:18px 22px;display:none;}
 .collap.open .collap-body{display:block;}
 .collap.open .chev{transform:rotate(180deg);}
-.chev{transition:.2s;color:var(--muted);}
-label.fl{display:block;font-size:13px;font-weight:800;margin:0 0 6px;color:#28323e;}
+.chev{transition:.2s;}
+
+label.fl{display:block;font-size:13px;font-weight:700;margin:0 0 6px;color:#33414f;}
 .grid3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;}
 .grid2{display:grid;grid-template-columns:1fr 2fr;gap:14px;margin-top:14px;}
-input[type=text],select,textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px;background:#fff;}
+input[type=text],select,textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:11px 13px;
+  font-size:14px;background:#fff;font-family:inherit;color:var(--ink);}
+input[type=text]:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(14,124,134,.12);}
 textarea{min-height:46px;resize:vertical;}
-.single{display:flex;align-items:center;gap:8px;margin:4px 2px 18px;font-size:14px;color:#36414e;}
+
+.single{display:flex;align-items:center;gap:8px;margin:0 2px 18px;font-size:14px;color:#3a4655;}
 .zones{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
-.zone{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;}
-.zone .zh{color:#fff;padding:11px 16px;font-weight:800;font-size:14px;}
-.zone.cy .zh{background:var(--blue);}.zone.py .zh{background:var(--green);}
-.drop{margin:16px;border:2px dashed #ccd6e4;border-radius:10px;padding:26px 14px;text-align:center;}
-.drop.cy .cloud{color:var(--blue);}.drop.py .cloud{color:var(--green);}
-.drop .cloud{font-size:38px;}
-.drop b{display:block;margin:10px 0 4px;font-size:16px;}
+.zone{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;}
+.zone .zh{color:#fff;padding:12px 16px;font-weight:700;font-size:14px;}
+.zone.cy .zh{background:var(--cy);}.zone.py .zh{background:var(--py);}
+.drop{margin:16px;border:2px dashed #cfdae8;border-radius:11px;padding:26px 14px;text-align:center;transition:.15s;}
+.drop.cy .cloud{color:var(--cy);}.drop.py .cloud{color:var(--py);}
+.drop .cloud{font-size:36px;}
+.drop b{display:block;margin:10px 0 4px;font-size:16px;color:var(--heading);}
 .drop small{color:var(--muted);}
-.browse{margin-top:12px;border:1px solid;border-radius:8px;background:#fff;padding:8px 16px;cursor:pointer;font-size:14px;}
-.drop.cy .browse{color:var(--blue);border-color:var(--blue);}
-.drop.py .browse{color:var(--green);border-color:var(--green);}
+.browse{margin-top:12px;border:1px solid;border-radius:9px;background:#fff;padding:9px 18px;cursor:pointer;font-size:14px;font-family:inherit;}
+.drop.cy .browse{color:var(--cy);border-color:var(--cy);}
+.drop.py .browse{color:var(--py);border-color:var(--py);}
 .fname{margin-top:10px;font-size:13px;color:#2b6a3f;font-weight:700;word-break:break-all;}
-.zone.single-hide{opacity:.5;pointer-events:none;}
-.convert-wrap{text-align:center;margin:24px 0 8px;}
-.convert{background:linear-gradient(180deg,#ef7a32,#e0561a);color:#fff;border:none;border-radius:12px;padding:16px 40px;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 8px 18px rgba(224,86,26,.32);width:100%;max-width:760px;}
-.convert:disabled{background:#cbb3a4;box-shadow:none;cursor:default;}
+.zone.single-hide{opacity:.45;pointer-events:none;}
+
+.codewrap{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+.codewrap input{flex:1;min-width:240px;font-size:16px;letter-spacing:1px;}
+.codenote{font-size:12.5px;color:var(--muted);margin-top:10px;}
+.remember{display:flex;align-items:center;gap:7px;font-size:13px;color:#3a4655;margin-top:12px;}
+.verify-tag{font-size:13px;font-weight:700;margin-left:4px;}
+
+.convert-wrap{text-align:center;margin:26px 0 8px;}
+.convert{background:linear-gradient(135deg,var(--amber),var(--amber2));color:#fff;border:none;border-radius:13px;
+  padding:17px 40px;font-size:18px;font-weight:700;cursor:pointer;box-shadow:0 8px 20px rgba(189,117,38,.28);
+  width:100%;max-width:760px;font-family:"Calibri","Segoe UI",Arial,sans-serif;letter-spacing:.3px;}
+.convert:hover{filter:brightness(1.03);}
+.convert:disabled{background:#c9cdd4;box-shadow:none;cursor:default;}
 #status{text-align:center;font-size:14px;margin:14px 0;min-height:20px;}
-.ok{color:#1a7f37;font-weight:700;}.err{color:#c0392b;font-weight:700;}
-.spinner{display:inline-block;width:15px;height:15px;border:2px solid #cdd;border-top-color:var(--orange);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:7px;}
+.ok{color:#1a7f48;font-weight:700;}.err{color:#c0392b;font-weight:700;}
+.spinner{display:inline-block;width:15px;height:15px;border:2px solid #d4dde6;border-top-color:var(--teal);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:7px;}
 @keyframes sp{to{transform:rotate(360deg)}}
-.howto li{margin:5px 0;font-size:14px;color:#33414f;}
-details.review summary{cursor:pointer;color:var(--blue2);font-weight:700;font-size:13px;}
-details.review textarea{margin-top:8px;min-height:240px;font-family:Consolas,monospace;font-size:12px;}
-.review-actions{margin-top:10px;}
-.btn-sm{border:1px solid var(--blue);color:var(--blue);background:#fff;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;font-weight:700;}
-footer{background:#15203a;color:#cbd5e6;margin-top:30px;}
-.foot{max-width:1120px;margin:0 auto;padding:30px 22px;display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:26px;}
-.foot h4{color:var(--orange);margin:0 0 12px;font-size:13px;letter-spacing:1px;}
+
+.howto li{margin:6px 0;font-size:14px;color:#36424f;}
+.btn-sm{border:1px solid var(--teal);color:var(--teal);background:#fff;border-radius:9px;padding:9px 15px;font-size:13px;cursor:pointer;font-weight:700;font-family:inherit;}
+details.review summary{cursor:pointer;color:var(--teal);font-weight:700;font-size:14px;}
+details.review textarea{margin-top:10px;min-height:240px;font-family:Consolas,monospace;font-size:12px;}
+.review-actions{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;}
+
+footer{background:var(--header);color:#c6d2df;margin-top:34px;}
+.foot{max-width:1120px;margin:0 auto;padding:32px 22px;display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:28px;}
+.foot h4{color:var(--amber);margin:0 0 12px;font-size:13px;letter-spacing:1.2px;font-weight:700;}
 .foot div p{margin:5px 0;font-size:13px;}
-.foot a{color:#7fd4e6;}
-.copy{text-align:center;padding:14px 16px;border-top:1px solid #243150;font-size:12px;color:#9aa6bd;line-height:1.7;}
+.foot a{color:#8fd3da;}
+.copy{text-align:center;padding:15px 16px;border-top:1px solid #25405a;font-size:12px;color:#94a2b3;line-height:1.8;}
 .copy b{color:#fff;}
 @media(max-width:780px){.choices,.zones,.grid3,.grid2,.foot{grid-template-columns:1fr;}}
 </style>
@@ -90,11 +127,10 @@ footer{background:#15203a;color:#cbd5e6;margin-top:30px;}
 <div class="topbar">
   <img class="logo" src="/static/logo.png" alt="M S Joshi & Co." onerror="this.style.display='none';document.getElementById('lf').style.display='block';">
   <div class="logo-fallback" id="lf">
-    <h1>M S JOSHI &amp; Co.</h1>
-    <p>Chartered Accountants</p>
+    <h1>M S JOSHI &amp; Co.</h1><p>Chartered Accountants</p>
     <small>(Certified by Peer Review Board — ICAI)</small>
   </div>
-  <div><span class="badge">&#9889; ICAI NCE Converter</span></div>
+  <div><span class="badge">ICAI NCE Converter</span></div>
 </div>
 
 <div class="banner">
@@ -107,20 +143,20 @@ footer{background:#15203a;color:#cbd5e6;margin-top:30px;}
     <div class="card-body">
       <div class="contact-row">
         <div class="l">
-          <p style="margin:0 0 6px;font-weight:800;color:var(--navy)">&#128276; Need help or access?</p>
-          <p class="sub" style="margin:0">Upload your two-year T-format statements and convert them to the ICAI NCE format in seconds. For assistance, contact us:</p>
+          <p style="margin:0 0 6px;font-weight:700;color:var(--heading)" class="hd">Need help or access?</p>
+          <p class="sub" style="margin:0">Upload your two-year T-format statements and convert them to the ICAI NCE format in seconds. For an access code or assistance, contact us:</p>
         </div>
         <div class="r">
           <b>M S Joshi &amp; Co., Chartered Accountants</b><br>
-          &#128222; +91 96240 94390 &nbsp;|&nbsp; &#127760; <a href="https://msjc.in" target="_blank">msjc.in</a><br>
-          &#9993; <a href="mailto:connect@msjc.in">connect@msjc.in</a> &nbsp;|&nbsp; <a href="mailto:msjoshiandco@gmail.com">msjoshiandco@gmail.com</a>
+          +91 96240 94390 &nbsp;|&nbsp; <a href="https://msjc.in" target="_blank">msjc.in</a><br>
+          <a href="mailto:connect@msjc.in">connect@msjc.in</a> &nbsp;|&nbsp; <a href="mailto:msjoshiandco@gmail.com">msjoshiandco@gmail.com</a>
         </div>
       </div>
     </div>
   </div>
 
   <div class="card">
-    <div class="card-head"><span class="pill">STEP 1</span> &#127963;&#65039; Constitution Type</div>
+    <div class="card-head"><span class="pill">STEP 1</span> Constitution Type</div>
     <div class="card-body">
       <p class="sub">Select the type of entity before uploading files</p>
       <div class="choices">
@@ -132,7 +168,7 @@ footer{background:#15203a;color:#cbd5e6;margin-top:30px;}
 
   <div class="card collap" id="clientCard">
     <div class="collap-head" onclick="document.getElementById('clientCard').classList.toggle('open')">
-      <span><span class="pill">STEP 2</span> &nbsp;&#128100; Client Details <span style="color:var(--muted);font-weight:400">(optional)</span></span><span class="chev">&#9662;</span>
+      <span><span class="pill">STEP 2</span> &nbsp;Client Details (Optional)</span><span class="chev">&#9662;</span>
     </div>
     <div class="collap-body">
       <div class="grid3">
@@ -148,12 +184,12 @@ footer{background:#15203a;color:#cbd5e6;margin-top:30px;}
   </div>
 
   <div class="card">
-    <div class="card-head"><span class="pill">STEP 3</span> &#128228; Upload T-Format Statements</div>
+    <div class="card-head"><span class="pill">STEP 3</span> Upload T-Format Statements</div>
     <div class="card-body">
       <label class="single"><input type="checkbox" id="singleFile" onchange="toggleSingle()"> Both years are in a single file</label>
       <div class="zones">
         <div class="zone cy" id="zoneCY">
-          <div class="zh">&#128197; Current Year (CY) File</div>
+          <div class="zh">Current Year (CY) File</div>
           <div class="drop cy" id="dropCY">
             <div class="cloud">&#9729;</div><b>Drop Current Year file here</b>
             <small>Supported: Excel (.xlsx), Word (.docx), PDF (.pdf), image</small><br>
@@ -163,7 +199,7 @@ footer{background:#15203a;color:#cbd5e6;margin-top:30px;}
           </div>
         </div>
         <div class="zone py" id="zonePY">
-          <div class="zh">&#128197; Previous Year (PY) File</div>
+          <div class="zh">Previous Year (PY) File</div>
           <div class="drop py" id="dropPY">
             <div class="cloud">&#9729;</div><b>Drop Previous Year file here</b>
             <small>Supported: Excel (.xlsx), Word (.docx), PDF (.pdf), image</small><br>
@@ -176,10 +212,23 @@ footer{background:#15203a;color:#cbd5e6;margin-top:30px;}
     </div>
   </div>
 
-  <div class="convert-wrap"><button class="convert" id="convertBtn" onclick="convert()">&#8595; Convert to ICAI NCE Format — Download Excel</button></div>
+  <div class="card accent">
+    <div class="card-head">Access Code <span class="req">Required</span></div>
+    <div class="card-body">
+      <div class="codewrap">
+        <input type="text" id="accessCode" placeholder="Enter your access code" autocomplete="off">
+        <button class="btn-sm" onclick="verifyCode()">Verify</button>
+        <span id="verifyTag" class="verify-tag"></span>
+      </div>
+      <label class="remember"><input type="checkbox" id="remember" checked> Remember on this device</label>
+      <div class="codenote">An access code is required to generate the workbook. Don't have one? Contact M S Joshi &amp; Co. — <a href="mailto:connect@msjc.in">connect@msjc.in</a> &middot; +91 96240 94390.</div>
+    </div>
+  </div>
+
+  <div class="convert-wrap"><button class="convert" id="convertBtn" onclick="convert()">Convert to ICAI NCE Format — Download Excel</button></div>
   <div id="status"></div>
 
-  <details class="review card" style="padding:14px 20px">
+  <details class="review card" style="padding:16px 22px">
     <summary>Advanced — correct figures manually (Optional)</summary>
     <div style="padding-top:10px">
       <p class="sub">After a conversion, the structured data appears here. Edit it and regenerate if needed. You can also paste your own JSON and click Generate.</p>
@@ -193,13 +242,13 @@ footer{background:#15203a;color:#cbd5e6;margin-top:30px;}
   </details>
 
   <div class="card"><div class="card-body howto">
-    <p style="font-weight:800;margin:0 0 8px;color:var(--navy)">&#8505;&#65039; How to use</p>
+    <p class="hd" style="font-weight:700;margin:0 0 8px;color:var(--heading)">How to use</p>
     <ol style="margin:0;padding-left:20px">
       <li>Select the constitution type (Proprietorship or Partnership).</li>
       <li>Optionally fill in client details (entity name, PAN, GSTIN, etc.).</li>
       <li>Prepare T-format financial statements in Excel (.xlsx), Word (.docx), or PDF (.pdf).</li>
       <li>Upload files for Current Year and Previous Year (or tick "single file" if both years are in one file).</li>
-      <li>Click "Convert" and download the auto-generated ICAI NCE format workbook.</li>
+      <li>Enter your access code, then click "Convert" and download the auto-generated ICAI NCE format workbook.</li>
       <li>Review the output, verify placeholders, and finalise.</li>
       <li><i>(Optional) The "Advanced — correct figures manually" panel lets you review and edit the extracted figures before regenerating. Most users can skip it.</i></li>
     </ol>
@@ -212,12 +261,12 @@ footer{background:#15203a;color:#cbd5e6;margin-top:30px;}
       <p><b style="color:#fff">M S Joshi &amp; Co.</b></p>
       <p>Chartered Accountants</p>
       <p>(Certified by Peer Review Board — ICAI)</p>
-      <p>&#128222; +91 96240 94390</p>
+      <p>+91 96240 94390</p>
     </div>
     <div><h4>ONLINE</h4>
-      <p>&#127760; <a href="https://msjc.in" target="_blank">msjc.in</a></p>
-      <p>&#9993; <a href="mailto:connect@msjc.in">connect@msjc.in</a></p>
-      <p>&#9993; <a href="mailto:msjoshiandco@gmail.com">msjoshiandco@gmail.com</a></p>
+      <p><a href="https://msjc.in" target="_blank">msjc.in</a></p>
+      <p><a href="mailto:connect@msjc.in">connect@msjc.in</a></p>
+      <p><a href="mailto:msjoshiandco@gmail.com">msjoshiandco@gmail.com</a></p>
     </div>
     <div><h4>OFFICE</h4>
       <p>808-809, Avadh Kontina,</p>
@@ -225,10 +274,11 @@ footer{background:#15203a;color:#cbd5e6;margin-top:30px;}
       <p>VIP Road, Surat – 395007</p>
     </div>
   </div>
-  <div class="copy"><b>M S Joshi &amp; Co.</b> — Chartered Accountants (Certified by Peer Review Board — ICAI) &nbsp;&bull;&nbsp; 808-809, Avadh Kontina, Canal Road Corner, Near C B Patel Club, VIP Road, Surat – 395007 &nbsp;&bull;&nbsp; +91 96240 94390 &nbsp;&bull;&nbsp; msjc.in &nbsp;&bull;&nbsp; connect@msjc.in &nbsp;&bull;&nbsp; ICAI NCE Converter &nbsp;&bull;&nbsp; Powered by Claude AI</div>
+  <div class="copy"><b>M S Joshi &amp; Co.</b> — Chartered Accountants (Certified by Peer Review Board — ICAI) &nbsp;&bull;&nbsp; 808-809, Avadh Kontina, Canal Road Corner, Near C B Patel Club, VIP Road, Surat – 395007 &nbsp;&bull;&nbsp; +91 96240 94390 &nbsp;&bull;&nbsp; msjc.in &nbsp;&bull;&nbsp; connect@msjc.in &nbsp;&bull;&nbsp; Powered by Claude AI</div>
 </footer>
 <script>
 var CONS='proprietorship';
+try{var sc=localStorage.getItem('nce_code');if(sc)document.getElementById('accessCode').value=sc;}catch(e){}
 function pickC(c){CONS=c;
   document.getElementById('ch-prop').classList.toggle('sel',c==='proprietorship');
   document.getElementById('ch-part').classList.toggle('sel',c==='partnership');}
@@ -240,6 +290,10 @@ function setName(w){var f=document.getElementById('in'+w).files[0];
 function setStatus(msg,cls,spin){var e=document.getElementById('status');
   e.className=cls||'';e.innerHTML=(spin?'<span class="spinner"></span>':'')+msg;}
 function val(id){return (document.getElementById(id).value||'').trim();}
+function getCode(){var c=val('accessCode');
+  try{if(document.getElementById('remember').checked && c)localStorage.setItem('nce_code',c);else if(!document.getElementById('remember').checked)localStorage.removeItem('nce_code');}catch(e){}
+  return c;}
+function codeHeaders(extra){var h=extra||{};h['X-Access-Code']=getCode();return h;}
 function clientExtra(){var n=val('f-name'),p=val('f-pan'),g=val('f-gstin'),nat=val('f-nature'),d=val('f-desc');var t=[];
   if(n)t.push('Entity name: '+n);if(p)t.push('PAN: '+p);if(g)t.push('GSTIN: '+g);
   if(nat)t.push('Business nature: '+nat);if(d)t.push('Business description: '+d);return t.join('. ');}
@@ -250,12 +304,21 @@ function applyClient(data){data.entity=data.entity||{};
   if(val('f-nature'))data.entity.nature_of_business=val('f-nature');
   data.entity.constitution=CONS;}
 function cleanErr(m){try{var j=JSON.parse(m);return j.detail||m;}catch(e){return (m||'').slice(0,300);}}
+async function verifyCode(){
+  var tag=document.getElementById('verifyTag');
+  if(!val('accessCode')){tag.textContent='Enter a code first';tag.style.color='#c0392b';return;}
+  tag.textContent='Checking...';tag.style.color='#6b7888';
+  try{var r=await fetch('/api/verify',{method:'POST',headers:codeHeaders()});
+    if(r.ok){tag.textContent='✓ Valid code';tag.style.color='#1a7f48';}
+    else{tag.textContent='✗ Invalid / inactive';tag.style.color='#c0392b';}}
+  catch(e){tag.textContent='Could not verify';tag.style.color='#c0392b';}}
 async function buildAndDownload(payload){
-  var r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  var r=await fetch('/api/generate',{method:'POST',headers:codeHeaders({'Content-Type':'application/json'}),body:JSON.stringify(payload)});
   if(!r.ok){throw new Error(await r.text());}
   var blob=await r.blob();var cd=r.headers.get('Content-Disposition')||'';var m=cd.match(/filename="([^"]+)"/);
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=m?m[1]:'ICAI_NCE.xlsx';a.click();}
 async function convert(){
+  if(!val('accessCode')){setStatus('Please enter your access code above before converting.','err');return;}
   var single=document.getElementById('singleFile').checked;
   var cy=document.getElementById('inCY').files[0];var py=document.getElementById('inPY').files[0];
   if(!cy){setStatus('Please upload the Current Year file.','err');return;}
@@ -265,26 +328,27 @@ async function convert(){
   document.getElementById('convertBtn').disabled=true;
   setStatus('Reading your statements with Claude and building the workbook... this can take 30-60 seconds.','',true);
   try{
-    var r=await fetch('/api/extract',{method:'POST',body:fd});
+    var r=await fetch('/api/extract',{method:'POST',headers:codeHeaders(),body:fd});
     if(!r.ok){throw new Error(await r.text());}
     var data=await r.json();applyClient(data);
     document.getElementById('json').value=JSON.stringify(data,null,2);
     await buildAndDownload(data);
-    setStatus('Done. Your ICAI NCE workbook has been downloaded. Open the Review / edit panel to adjust and regenerate.','ok');
+    setStatus('Done. Your ICAI NCE workbook has been downloaded.','ok');
   }catch(e){setStatus('Conversion failed: '+cleanErr(e.message),'err');}
   document.getElementById('convertBtn').disabled=false;}
-async function generateFromJson(){var p;
-  try{p=JSON.parse(document.getElementById('json').value);}catch(e){setStatus('JSON is invalid: '+e.message,'err');return;}
+async function generateFromJson(){
+  if(!val('accessCode')){setStatus('Please enter your access code above.','err');return;}
+  var p;try{p=JSON.parse(document.getElementById('json').value);}catch(e){setStatus('JSON is invalid: '+e.message,'err');return;}
   setStatus('Building workbook...','',true);
   try{await buildAndDownload(p);setStatus('Workbook generated and downloaded.','ok');}catch(e){setStatus('Build failed: '+cleanErr(e.message),'err');}}
 async function loadSample(which){
   var d=await(await fetch('/static/sample_'+(which==='firm'?'firm':'prop')+'.json')).json();
   document.getElementById('json').value=JSON.stringify(d,null,2);
-  setStatus('Sample loaded into the review panel. Click Generate workbook from this JSON.','ok');}
+  setStatus('Sample loaded into the Advanced panel. Enter your access code, then click Generate workbook from this JSON.','ok');}
 ['CY','PY'].forEach(function(w){var z=document.getElementById('drop'+w);
-  z.addEventListener('dragover',function(e){e.preventDefault();z.style.borderColor='#1f6fe0';});
-  z.addEventListener('dragleave',function(e){z.style.borderColor='#ccd6e4';});
-  z.addEventListener('drop',function(e){e.preventDefault();z.style.borderColor='#ccd6e4';
+  z.addEventListener('dragover',function(e){e.preventDefault();z.style.borderColor='#0e7c86';});
+  z.addEventListener('dragleave',function(e){z.style.borderColor='#cfdae8';});
+  z.addEventListener('drop',function(e){e.preventDefault();z.style.borderColor='#cfdae8';
     var f=e.dataTransfer.files;if(f.length){document.getElementById('in'+w).files=f;setName(w);}});});
 </script>
 </body>
