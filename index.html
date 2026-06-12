@@ -195,7 +195,7 @@ footer{background:var(--header);color:#c6d2df;margin-top:34px;}
   <div class="card">
     <div class="card-head"><span class="pill">STEP 3</span> Upload T-Format Statements</div>
     <div class="card-body">
-      <div class="tip">&#128161; <b>Tip:</b> For the fastest and most accurate results, upload <b>Word (.docx)</b> files. PDF, Excel and image formats are also supported for exceptional cases.</div>
+      <div class="tip">&#128161; <b>Tip:</b> For the fastest and most accurate results, upload <b>Word .docx</b> files. PDF, Excel and image are also supported. <i>(Legacy .doc — the old binary format — isn’t supported; in Word use Save As &rarr; .docx.)</i></div>
       <label class="single"><input type="checkbox" id="singleFile" onchange="toggleSingle()"> Both years are in a single file</label>
       <div class="zones">
         <div class="zone cy" id="zoneCY">
@@ -205,7 +205,7 @@ footer{background:var(--header);color:#c6d2df;margin-top:34px;}
             <small>Best: Word (.docx). Also accepts PDF, Excel, image.</small><br>
             <button class="browse" onclick="document.getElementById('inCY').click()">Browse Files</button>
             <div class="fname" id="nameCY"></div>
-            <input type="file" id="inCY" style="display:none" accept=".xlsx,.xls,.docx,.pdf,.png,.jpg,.jpeg" onchange="setName('CY')">
+            <input type="file" id="inCY" style="display:none" accept=".docx,.pdf,.xlsx,.xls,.png,.jpg,.jpeg" onchange="setName('CY')">
           </div>
         </div>
         <div class="zone py" id="zonePY">
@@ -215,7 +215,7 @@ footer{background:var(--header);color:#c6d2df;margin-top:34px;}
             <small>Best: Word (.docx). Also accepts PDF, Excel, image.</small><br>
             <button class="browse" onclick="document.getElementById('inPY').click()">Browse Files</button>
             <div class="fname" id="namePY"></div>
-            <input type="file" id="inPY" style="display:none" accept=".xlsx,.xls,.docx,.pdf,.png,.jpg,.jpeg" onchange="setName('PY')">
+            <input type="file" id="inPY" style="display:none" accept=".docx,.pdf,.xlsx,.xls,.png,.jpg,.jpeg" onchange="setName('PY')">
           </div>
         </div>
       </div>

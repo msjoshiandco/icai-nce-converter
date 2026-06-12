@@ -76,6 +76,11 @@ async def api_extract(constitution: str = Form(...),
                                  "Use the manual JSON path, or set the key and redeploy.")
     payload_files = []
     for f in files:
+        nm = (f.filename or "").lower()
+        if nm.endswith(".doc") and not nm.endswith(".docx"):
+            raise HTTPException(415, "This looks like a legacy .doc file (old Word format). "
+                                     "Please open it in Word and use File > Save As > Word Document (.docx), "
+                                     "then upload the .docx. PDF and Excel are also supported.")
         payload_files.append((f.filename, await f.read()))
     try:
         from llm import extract_payload, reconcile_and_correct
