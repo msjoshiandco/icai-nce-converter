@@ -12,7 +12,7 @@ from typing import List, Tuple
 from models import Payload
 from prompts import system_prompt
 
-DEFAULT_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-opus-4-20250514")
+DEFAULT_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
 
 
 def _client():
