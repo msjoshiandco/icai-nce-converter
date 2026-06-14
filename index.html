@@ -235,6 +235,18 @@ footer{background:var(--header);color:#c6d2df;margin-top:34px;}
     </div>
   </div>
 
+  <div class="card"><div class="card-body" style="padding:16px 24px">
+    <label class="fl" for="denom">Display figures in (denomination)</label>
+    <select id="denom" style="max-width:320px">
+      <option value="actual">Actual — Rupees (absolute)</option>
+      <option value="thousands">Thousands — Rs. in '000 (display-only)</option>
+      <option value="lakhs">Lakhs — Rs. in lakhs</option>
+      <option value="millions">Millions — Rs. in millions (display-only)</option>
+      <option value="crores">Crores — Rs. in crores</option>
+    </select>
+    <div class="codenote" style="margin-top:8px">Thousands &amp; Millions scale the <b>display only</b> — the cell keeps the absolute figure. Lakhs &amp; Crores store the scaled figure. The "Amount in Rs." caption and notes update to the chosen denomination.</div>
+  </div></div>
+
   <div class="convert-wrap"><button class="convert" id="convertBtn" onclick="convert()">Convert to ICAI NCE Format — Download Excel</button></div>
   <div id="status"></div>
   <div id="reconReport"></div>
@@ -324,7 +336,8 @@ async function verifyCode(){
     else{tag.textContent='✗ Invalid / inactive';tag.style.color='#c0392b';}}
   catch(e){tag.textContent='Could not verify';tag.style.color='#c0392b';}}
 async function buildAndDownload(payload){
-  var r=await fetch('/api/generate',{method:'POST',headers:codeHeaders({'Content-Type':'application/json'}),body:JSON.stringify(payload)});
+  var denom=(document.getElementById('denom')||{}).value||'actual';
+  var r=await fetch('/api/generate?denomination='+encodeURIComponent(denom),{method:'POST',headers:codeHeaders({'Content-Type':'application/json'}),body:JSON.stringify(payload)});
   if(!r.ok){
     var et=await r.text();
     try{var ej=JSON.parse(et); if(ej.detail && ej.detail.report){ showRecon({passed:false,report:ej.detail.report,discrepancies:ej.detail.discrepancies},false); throw new Error('Reconciliation failed — see report.'); }}catch(_){}

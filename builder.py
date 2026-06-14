@@ -20,6 +20,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.properties import PageSetupProperties
+from openpyxl.worksheet.page import PageMargins
 
 from models import Payload, Note, OwnerCapital, SUB_KINDS
 
@@ -105,15 +106,32 @@ CY_FILL = PatternFill("solid", fgColor="EBF1EA")        # faint current-year col
 
 
 class Engine:
-    def __init__(self, payload: Payload):
+    def __init__(self, payload: Payload, denomination: str = "actual"):
         self.p = payload
         self.wb = Workbook()
         self.firm = payload.entity.constitution == "partnership"
-        # logical anchor -> "Sheet!Cell" for cross-sheet formulas
         self.anchor: Dict[str, str] = {}
-        # final note number per key (after suppression)
         self.note_no: Dict[str, int] = {}
         self.retained: List[str] = []
+        self.numcell: Dict[str, str] = {}     # note key -> "AD{row}" on Notes
+        # (value_scale, display_suffix, caption_word, threshold_multiplier)
+        cfg = {
+            "actual":    (1.0,  "",   "",             1),
+            "thousands": (1.0,  ",",  "in thousands",  1000),
+            "millions":  (1.0,  ",,", "in millions",   1000000),
+            "lakhs":     (1e-5, "",   "in lakhs",      1),
+            "crores":    (1e-7, "",   "in crores",     1),
+        }.get((denomination or "actual").lower(), (1.0, "", "", 1))
+        self.denom_scale, self.denom_suffix, self.denom_word, _D = cfg
+        # thousands/millions scale DISPLAY only (cells stay absolute); lakhs/crores scale the value.
+        # Thresholds are multiplied by _D so the Indian grouping matches the DISPLAYED magnitude.
+        suf = self.denom_suffix
+        cr, lk = int(1e7 * _D), int(1e5 * _D)
+        self.POS = (f'[>={cr}]##\\,##\\,##\\,##0.00{suf};'
+                    f'[>={lk}]##\\,##\\,##0.00{suf};##,##0.00{suf}')
+        self.NEG = (f'[<=-{cr}](##\\,##\\,##\\,##0.00{suf});'
+                    f'[<=-{lk}](##\\,##\\,##0.00{suf});(##,##0.00{suf})')
+        self.ZERO = '"-"' 
 
     # -- styling helpers ------------------------------------------------------
     def _f(self, bold=False, italic=False, size=11, color=None):
@@ -123,6 +141,10 @@ class Engine:
     def cell(self, ws, r, c, val=None, bold=False, italic=False, num=False,
              center=False, right=False, wrap=False, size=11, top=False,
              bottom=False, double_bottom=False, fill=None, val_hint=None):
+        if isinstance(val, str) and "\u20b9" in val:
+            val = val.replace("\u20b9", "Rs. ")
+        if num and isinstance(val, (int, float)):
+            val = val * self.denom_scale
         cl = ws.cell(row=r, column=c, value=val)
         cl.font = self._f(bold, italic, size)
         al = Alignment(vertical="top", wrap_text=wrap,
@@ -131,11 +153,12 @@ class Engine:
         if fill is not None:
             cl.fill = fill
         if num:
-            hint = val if isinstance(val, (int, float)) else val_hint
+            hint = val if isinstance(val, (int, float)) else (
+                val_hint * self.denom_scale if isinstance(val_hint, (int, float)) else None)
             if isinstance(hint, (int, float)):
-                cl.number_format = ZERO_FMT if abs(hint) < 0.005 else (NEG_FMT if hint < 0 else POS_FMT)
+                cl.number_format = self.ZERO if abs(hint) < 0.005 else (self.NEG if hint < 0 else self.POS)
             else:
-                cl.number_format = POS_FMT
+                cl.number_format = self.POS
         b = {}
         if top: b["top"] = THIN
         if bottom: b["bottom"] = THIN
@@ -173,6 +196,8 @@ class Engine:
         self.ws_idx = self.wb.create_sheet("Index")
         self.ws_cap = None   # capital account is now rendered inline within Notes
         self.ws_ppe = self.wb.create_sheet("PPE Schedule") if "ppe" in self.note_no else None
+        self._build_numbering()
+        self._denomination_footnote()
         if self.ws_ppe is not None:
             self.build_ppe_sheet(self.note_no["ppe"])
         self.build_notes()
@@ -182,6 +207,12 @@ class Engine:
         self._highlight_cy(self.ws_bs, 4, 4)
         self._highlight_cy(self.ws_pl, 4, 4)
         self._highlight_cy(self.ws_notes, 4, 5)
+        for ws in (self.ws_idx, self.ws_bs, self.ws_pl, self.ws_notes):
+            self._a4(ws)
+            ws.print_area = f"A1:F{ws.max_row}"
+        if self.ws_ppe is not None:
+            self.ws_ppe.page_setup.paperSize = 9
+            self.ws_ppe.print_area = f"A1:J{self.ws_ppe.max_row}"
         self._reorder()
         self._no_gridlines()
         return self._save_with_theme_patch()
@@ -198,12 +229,76 @@ class Engine:
             if isinstance(v, (int, float)) or (isinstance(v, str) and v.startswith("=")):
                 ws.cell(row=rr, column=col).fill = CY_FILL
 
+    def _a4(self, ws):
+        ws.page_setup.orientation = "portrait"
+        ws.page_setup.paperSize = 9
+        ws.page_setup.fitToWidth = 1
+        ws.page_setup.fitToHeight = 0
+        ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
+        ws.page_margins = PageMargins(left=0.4, right=0.4, top=0.5, bottom=0.5, header=0.2, footer=0.2)
+
+    def _scaled(self, fmt):
+        return fmt.replace("0.00", "0.00" + self.denom_suffix) if self.denom_suffix else fmt
+
+    def _amount_caption(self):
+        if self.denom_word:
+            return f"(Amount in Rs. {self.denom_word}, except as otherwise stated)"
+        return "(Amount in Rs., except as otherwise stated)"
+
+    def _build_numbering(self):
+        col = 30  # column AD on the Notes sheet (hidden) holds the live note numbers
+        for i, key in enumerate(self.retained):
+            row = i + 1
+            cl = self.ws_notes.cell(row=row, column=col,
+                                    value=(1 if i == 0 else f"=AD{row-1}+1"))
+            cl.font = self._f()
+            self.numcell[key] = f"AD{row}"
+        self.ws_notes.column_dimensions["AD"].hidden = True
+
+    def _heading_formula(self, key):
+        cell = self.numcell.get(key)
+        return f'="Note "&{cell}' if cell else f"Note {self.note_no.get(key, '')}"
+
+    def _subnum(self, key, k):
+        cell = self.numcell.get(key)
+        return f'={cell}&".{k}"' if cell else f"{self.note_no.get(key, '')}.{k}"
+
+    def _denomination_footnote(self):
+        if not self.denom_word:
+            return
+        rn = self.p.note("rounding")
+        if rn is None:
+            rn = Note(key="rounding", title="Rounding-off")
+            self.p.notes.append(rn)
+        line = f"All amounts are expressed in Rupees ({self.denom_word}) unless otherwise stated."
+        rn.footnotes = [line] + [f for f in (rn.footnotes or []) if f != line]
+
+    def _render_footnotes_numbered(self, ws, r, key, footnotes, start_k, policy=False):
+        for j, fn in enumerate(footnotes, start=start_k):
+            if policy and ":" in fn:
+                head, body = fn.split(":", 1)
+                self.cell(ws, r, 1, self._subnum(key, j), bold=True)
+                self.cell(ws, r, 2, head.strip(), bold=True)
+                r += 1
+                self.cell(ws, r, 2, body.strip(), wrap=True)
+                ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=6)
+                ws.row_dimensions[r].height = max(15 * ((len(body) // 110) + 1), 15)
+                r += 1
+            else:
+                self.cell(ws, r, 1, self._subnum(key, j), bold=True)
+                self.cell(ws, r, 2, fn, italic=True, wrap=True)
+                ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=6)
+                ws.row_dimensions[r].height = max(15 * ((len(fn) // 110) + 1), 15)
+                r += 1
+        return r
+
     def _no_gridlines(self):
         for ws in self.wb.worksheets:
             ws.sheet_view.showGridLines = False
 
     def _landscape(self, ws):
         ws.page_setup.orientation = "landscape"
+        ws.page_setup.paperSize = 9
         ws.page_setup.fitToWidth = 1
         ws.page_setup.fitToHeight = 0
         ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
@@ -216,7 +311,7 @@ class Engine:
         ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=span)
         self.cell(ws, 2, 1, desc, bold=True, center=True)
         ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=span)
-        self.cell(ws, 3, span, "(Amount in Indian Rupees, except as otherwise stated)", italic=True, right=True)
+        self.cell(ws, 3, span, self._amount_caption(), italic=True, right=True)
 
     # -- NOTES ----------------------------------------------------------------
     def build_notes(self):
@@ -244,15 +339,15 @@ class Engine:
         note = self.p.note("capital")
         title = (note.title if note and note.title else
                  ("Partners' Capital Account" if self.firm else "Owner's Capital Account"))
-        self.cell(ws, r, 1, f"Note {num}", bold=True)
+        self.cell(ws, r, 1, self._heading_formula("capital"), bold=True)
         self.cell(ws, r, 2, title, bold=True)
         r += 1
         if self.firm:
             r = self._cap_inline_partners(ws, r)
         else:
             r = self._cap_inline_owner(ws, r)
-        if note:
-            r = self._footnotes(ws, r, note)
+        if note and note.footnotes:
+            r = self._render_footnotes_numbered(ws, r, "capital", note.footnotes, 1)
         return r + 1
 
     def _cap_inline_owner(self, ws, r):
@@ -330,7 +425,7 @@ class Engine:
         if note is None:
             return r
         # heading row, kept separate from the table
-        self.cell(ws, r, 1, f"Note {num}", bold=True)
+        self.cell(ws, r, 1, self._heading_formula(key), bold=True)
         self.cell(ws, r, 2, note.title, bold=True)
         r += 1
         # shaded table header
@@ -352,14 +447,16 @@ class Engine:
         self.anchor[f"note_{key}_cy"] = f"Notes!D{r}"
         self.anchor[f"note_{key}_py"] = f"Notes!F{r}"
         r += 1
-        r = self._footnotes(ws, r, note)
-        r = self._render_subnotes(ws, r, num, note)
+        r = self._render_subnotes(ws, r, key, note)
+        start_k = len(note.subnotes) + 1
+        if note.footnotes:
+            r = self._render_footnotes_numbered(ws, r, key, note.footnotes, start_k)
         return r + 1
 
-    def _render_subnotes(self, ws, r, num, note):
+    def _render_subnotes(self, ws, r, key, note, start_k=1):
         """Render note.subnotes as N.1, N.2 ... each with optional table/prose."""
-        for k, sn in enumerate(note.subnotes, start=1):
-            self.cell(ws, r, 1, f"{num}.{k}", bold=True)
+        for k, sn in enumerate(note.subnotes, start=start_k):
+            self.cell(ws, r, 1, self._subnum(key, k), bold=True)
             self.cell(ws, r, 2, sn.title, bold=True)
             r += 1
             if sn.items:
@@ -388,23 +485,18 @@ class Engine:
     def _note_prose(self, ws, r, num, key):
         note = self.p.note(key)
         title = note.title if note else self._default_title(key)
-        self.cell(ws, r, 1, f"Note {num}", bold=True)
+        self.cell(ws, r, 1, self._heading_formula(key), bold=True)
         self.cell(ws, r, 2, title, bold=True)
         r += 1
-        body = []
         if note and note.footnotes:
             body = note.footnotes
         elif note and note.items:
-            body = [f"{it.label}" for it in note.items]
+            body = [it.label for it in note.items]
         else:
             body = [self._default_prose(key)]
-        for para in body:
-            self.cell(ws, r, 2, para, italic=False, wrap=True)
-            ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=6)
-            ws.row_dimensions[r].height = max(15 * ((len(para) // 110) + 1), 15)
-            r += 1
-        if note:
-            r = self._render_subnotes(ws, r, num, note)
+        r = self._render_footnotes_numbered(ws, r, key, body, 1, policy=(key == "policies"))
+        if note and note.subnotes:
+            r = self._render_subnotes(ws, r, key, note, start_k=len(body) + 1)
         return r + 1
 
     def _default_title(self, key):
@@ -585,7 +677,7 @@ class Engine:
         self._landscape(ws)
         for w, wd in {"A": 4, "B": 30, "C": 14, "D": 13, "E": 14, "F": 14, "G": 13, "H": 14, "I": 14, "J": 14}.items():
             ws.column_dimensions[w].width = wd
-        self.title_block(ws, f"Note {num} \u2014 Property, Plant and Equipment", span=10)
+        self.title_block(ws, f'="Note "&Notes!{self.numcell["ppe"]}&" \u2014 Property, Plant and Equipment"', span=10)
         cyl, pyl = self.p.entity.cy_label, self.p.entity.py_label
         r = 5
         # super-group header (correctly aligned to detail columns)
@@ -685,7 +777,7 @@ class Engine:
                     continue
                 self.cell(ws, r, 2, lbl)
                 if key in self.note_no:
-                    self.cell(ws, r, 3, self.note_no[key], center=True)
+                    self.cell(ws, r, 3, f"=Notes!{self.numcell[key]}", center=True)
                 self.cell(ws, r, 4, f"='{self._sheet(cy_anchor)}'!{self._addr(cy_anchor)}", num=True)
                 py_anchor = self.anchor.get(f"note_{key}_py")
                 self.cell(ws, r, 6, f"='{self._sheet(py_anchor)}'!{self._addr(py_anchor)}", num=True)
@@ -737,7 +829,7 @@ class Engine:
             self.cell(ws, r, 1, roman, bold=bold)
             self.cell(ws, r, 2, label, bold=bold)
             if key and key in self.note_no:
-                self.cell(ws, r, 3, self.note_no[key], center=True)
+                self.cell(ws, r, 3, f"=Notes!{self.numcell[key]}", center=True)
             if val_cy is not None:
                 self.cell(ws, r, 4, val_cy, num=True, bold=bold, top=top, val_hint=hint_cy)
             if val_py is not None:
@@ -855,7 +947,8 @@ class Engine:
         r += 1
         self.cell(ws, r, 2, "Note index", bold=True); r += 1
         for key in self.retained:
-            self.cell(ws, r, 2, f"Note {self.note_no[key]}  {self._note_label(key)}")
+            _lbl = self._note_label(key).replace(chr(34), "'")
+            self.cell(ws, r, 2, f'="Note "&Notes!{self.numcell[key]}&"  {_lbl}"')
             r += 1
 
     def _note_label(self, key):
@@ -897,5 +990,5 @@ class Engine:
         return out.getvalue()
 
 
-def build_workbook(payload: Payload) -> bytes:
-    return Engine(payload).build()
+def build_workbook(payload: Payload, denomination: str = "actual") -> bytes:
+    return Engine(payload, denomination).build()

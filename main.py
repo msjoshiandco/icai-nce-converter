@@ -101,7 +101,7 @@ async def api_extract(constitution: str = Form(...),
 
 
 @app.post("/api/generate")
-async def api_generate(payload: dict, x_access_code: str = Header(None)):
+async def api_generate(payload: dict, denomination: str = "actual", x_access_code: str = Header(None)):
     require_code(x_access_code)
     import reconcile as rec
     try:
@@ -118,7 +118,7 @@ async def api_generate(payload: dict, x_access_code: str = Header(None)):
             "report": rec.report_text(discrepancies),
         })
     try:
-        data = build_workbook(p)
+        data = build_workbook(p, denomination)
     except Exception as e:
         raise HTTPException(400, f"Build failed: {e}")
     name = (p.entity.name or "Entity").replace(" ", "_")

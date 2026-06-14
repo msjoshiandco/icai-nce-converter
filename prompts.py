@@ -137,6 +137,8 @@ UNIVERSAL RULES
   an entity footnote "WARNING: depreciation chart required".
 - Previous Year Figures and Rounding-off notes are always present.
 - Do NOT invent figures. Do NOT create disclosures without basis.
+- Currency: always write "Rs." - never the rupee symbol. In footnotes/policies, write each
+  policy as "Header: explanation" (the engine renders the header bold and numbers it 2.1, 2.2 ...).
 
 CRITICAL COMPUTATION RULES (these make the Balance Sheet tally — get them right):
 - INVENTORY (never double-count): the stock movement must pass through EXACTLY ONE
