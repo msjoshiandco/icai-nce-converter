@@ -24,7 +24,14 @@ from openpyxl.worksheet.properties import PageSetupProperties
 from models import Payload, Note, OwnerCapital, SUB_KINDS
 
 FONT_NAME = "Calibri Light"
-NUMFMT = '#,##0.00;(#,##0.00)'
+# Indian digit grouping (lakh/crore). LibreOffice/Excel only honour grouping via
+# explicit [>=...] conditions, and allow at most two conditions per format, so we
+# pick the format per cell by sign: positives/formulas -> POS (crore-aware),
+# negatives -> NEG (bracketed), exact zero -> dash.
+POS_FMT = r'[>=10000000]##\,##\,##\,##0.00;[>=100000]##\,##\,##0.00;##,##0.00'
+NEG_FMT = r'[<=-10000000](##\,##\,##\,##0.00);[<=-100000](##\,##\,##0.00);(##,##0.00)'
+ZERO_FMT = '"-"'
+NUMFMT = POS_FMT
 
 # ---- Schedule III mapping ---------------------------------------------------
 # Balance-sheet line plan: (section_header, [(sub_label, note_key), ...])
@@ -92,6 +99,10 @@ SCHEDULE_ORDER = [
 THIN = Side(style="thin")
 DOUBLE = Side(style="double")
 
+# presentation fills (modelled on the firm's company-format statements)
+HEADER_FILL = PatternFill("solid", fgColor="DED8C6")   # warm tan column/table-header band
+CY_FILL = PatternFill("solid", fgColor="EBF1EA")        # faint current-year column highlight
+
 
 class Engine:
     def __init__(self, payload: Payload):
@@ -111,14 +122,20 @@ class Engine:
 
     def cell(self, ws, r, c, val=None, bold=False, italic=False, num=False,
              center=False, right=False, wrap=False, size=11, top=False,
-             bottom=False, double_bottom=False):
+             bottom=False, double_bottom=False, fill=None, val_hint=None):
         cl = ws.cell(row=r, column=c, value=val)
         cl.font = self._f(bold, italic, size)
         al = Alignment(vertical="top", wrap_text=wrap,
                        horizontal="center" if center else ("right" if right else None))
         cl.alignment = al
+        if fill is not None:
+            cl.fill = fill
         if num:
-            cl.number_format = NUMFMT
+            hint = val if isinstance(val, (int, float)) else val_hint
+            if isinstance(hint, (int, float)):
+                cl.number_format = ZERO_FMT if abs(hint) < 0.005 else (NEG_FMT if hint < 0 else POS_FMT)
+            else:
+                cl.number_format = POS_FMT
         b = {}
         if top: b["top"] = THIN
         if bottom: b["bottom"] = THIN
@@ -164,6 +181,9 @@ class Engine:
         self.build_balance_sheet()
         self.build_pl()
         self.build_index()
+        self._highlight_cy(self.ws_bs, 4, 4)
+        self._highlight_cy(self.ws_pl, 4, 4)
+        self._highlight_cy(self.ws_notes, 4, 5)
         self._reorder()
         self._no_gridlines()
         return self._save_with_theme_patch()
@@ -172,6 +192,11 @@ class Engine:
         order = ["Index", "Balance Sheet", "Statement of P&L", "Notes",
                  "Capital Account", "PPE Schedule"]
         self.wb._sheets.sort(key=lambda s: order.index(s.title) if s.title in order else 99)
+
+    def _highlight_cy(self, ws, col, r1):
+        """Paint a faint vertical band down the current-year amount column."""
+        for rr in range(r1, ws.max_row + 1):
+            ws.cell(row=rr, column=col).fill = CY_FILL
 
     def _no_gridlines(self):
         for ws in self.wb.worksheets:
@@ -191,7 +216,7 @@ class Engine:
         ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=span)
         self.cell(ws, 2, 1, desc, bold=True, center=True)
         ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=span)
-        self.cell(ws, 3, span, "(Amount in Rs.)", italic=True, right=True)
+        self.cell(ws, 3, span, "(Amount in Indian Rupees, except as otherwise stated)", italic=True, right=True)
 
     # -- NOTES ----------------------------------------------------------------
     def build_notes(self):
@@ -220,11 +245,25 @@ class Engine:
             self.cell(ws, r, 6, self.p.entity.py_label, bold=True, center=True)
         return r + 1
 
+    def _table_header(self, ws, r):
+        """Shaded table-header band: Particulars + year columns (cols 1-6)."""
+        for c in range(1, 7):
+            self.cell(ws, r, c, None, fill=HEADER_FILL, top=True, bottom=True)
+        self.cell(ws, r, 2, "Particulars", bold=True, fill=HEADER_FILL, top=True, bottom=True)
+        self.cell(ws, r, 4, self.p.entity.cy_label, bold=True, center=True, fill=HEADER_FILL, top=True, bottom=True)
+        self.cell(ws, r, 6, self.p.entity.py_label, bold=True, center=True, fill=HEADER_FILL, top=True, bottom=True)
+        return r + 1
+
     def _note_standard(self, ws, r, num, key):
         note = self.p.note(key)
         if note is None:
             return r
-        r = self._note_title(ws, r, num, note.title)
+        # heading row, kept separate from the table
+        self.cell(ws, r, 1, f"Note {num}", bold=True)
+        self.cell(ws, r, 2, note.title, bold=True)
+        r += 1
+        # shaded table header
+        r = self._table_header(ws, r)
         first = r
         for it in note.items:
             self.cell(ws, r, 2, it.label)
@@ -232,11 +271,10 @@ class Engine:
             self.cell(ws, r, 6, round(it.py, 2), num=True)
             r += 1
         last = r - 1
-        # total
         self.cell(ws, r, 2, "Total", bold=True)
         if note.items:
-            self.cell(ws, r, 4, f"=SUM(D{first}:D{last})", bold=True, num=True, top=True)
-            self.cell(ws, r, 6, f"=SUM(F{first}:F{last})", bold=True, num=True, top=True)
+            self.cell(ws, r, 4, f"=SUM(D{first}:D{last})", bold=True, num=True, top=True, val_hint=note.total_cy())
+            self.cell(ws, r, 6, f"=SUM(F{first}:F{last})", bold=True, num=True, top=True, val_hint=note.total_py())
         else:
             self.cell(ws, r, 4, 0, bold=True, num=True, top=True)
             self.cell(ws, r, 6, 0, bold=True, num=True, top=True)
@@ -244,7 +282,29 @@ class Engine:
         self.anchor[f"note_{key}_py"] = f"Notes!F{r}"
         r += 1
         r = self._footnotes(ws, r, note)
+        r = self._render_subnotes(ws, r, num, note)
         return r + 1
+
+    def _render_subnotes(self, ws, r, num, note):
+        """Render note.subnotes as N.1, N.2 ... each with optional table/prose."""
+        for k, sn in enumerate(note.subnotes, start=1):
+            self.cell(ws, r, 1, f"{num}.{k}", bold=True)
+            self.cell(ws, r, 2, sn.title, bold=True)
+            r += 1
+            if sn.items:
+                r = self._table_header(ws, r)
+                for it in sn.items:
+                    self.cell(ws, r, 2, it.label)
+                    self.cell(ws, r, 4, round(it.cy, 2), num=True)
+                    self.cell(ws, r, 6, round(it.py, 2), num=True)
+                    r += 1
+            for fn in sn.footnotes:
+                self.cell(ws, r, 2, fn, italic=True, wrap=True)
+                ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=6)
+                ws.row_dimensions[r].height = max(15 * ((len(fn) // 110) + 1), 15)
+                r += 1
+            r += 1
+        return r
 
     def _footnotes(self, ws, r, note):
         for fn in note.footnotes:
@@ -257,7 +317,9 @@ class Engine:
     def _note_prose(self, ws, r, num, key):
         note = self.p.note(key)
         title = note.title if note else self._default_title(key)
-        r = self._note_title(ws, r, num, title, with_years=False)
+        self.cell(ws, r, 1, f"Note {num}", bold=True)
+        self.cell(ws, r, 2, title, bold=True)
+        r += 1
         body = []
         if note and note.footnotes:
             body = note.footnotes
@@ -270,6 +332,8 @@ class Engine:
             ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=6)
             ws.row_dimensions[r].height = max(15 * ((len(para) // 110) + 1), 15)
             r += 1
+        if note:
+            r = self._render_subnotes(ws, r, num, note)
         return r + 1
 
     def _default_title(self, key):
@@ -329,9 +393,11 @@ class Engine:
             ws.column_dimensions[w].width = wd
         self.title_block(ws, f"Note {num} \u2014 Owner's Capital Account", span=6)
         r = 5
-        self.cell(ws, r, 2, "Particulars", bold=True, bottom=True)
-        self.cell(ws, r, 4, self.p.entity.cy_label, bold=True, center=True, bottom=True)
-        self.cell(ws, r, 6, self.p.entity.py_label, bold=True, center=True, bottom=True)
+        for _c in range(1, 7):
+            self.cell(ws, r, _c, None, fill=HEADER_FILL, top=True, bottom=True)
+        self.cell(ws, r, 2, "Particulars", bold=True, fill=HEADER_FILL, top=True, bottom=True)
+        self.cell(ws, r, 4, self.p.entity.cy_label, bold=True, center=True, fill=HEADER_FILL, top=True, bottom=True)
+        self.cell(ws, r, 6, self.p.entity.py_label, bold=True, center=True, fill=HEADER_FILL, top=True, bottom=True)
         r += 1
         add_rows, sub_rows = [], []
         for ln in oc.resolved_lines():
@@ -345,11 +411,13 @@ class Engine:
                 self.cell(ws, r, 6, round(ln.py, 2), num=True)
             (sub_rows if ln.kind in SUB_KINDS else add_rows).append(r)
             r += 1
+        cl_cy = sum(l.signed("cy") for l in oc.resolved_lines())
+        cl_py = sum(l.signed("py") for l in oc.resolved_lines())
         self.cell(ws, r, 2, "Closing Balance", bold=True)
         self.cell(ws, r, 4, self._closing_formula("D", add_rows, sub_rows),
-                  bold=True, num=True, top=True)
+                  bold=True, num=True, top=True, val_hint=cl_cy)
         self.cell(ws, r, 6, self._closing_formula("F", add_rows, sub_rows),
-                  bold=True, num=True, top=True)
+                  bold=True, num=True, top=True, val_hint=cl_py)
         self.anchor["note_capital_cy"] = f"Capital Account!D{r}"
         self.anchor["note_capital_py"] = f"Capital Account!F{r}"
         r += 2
@@ -450,18 +518,18 @@ class Engine:
         cyl, pyl = self.p.entity.cy_label, self.p.entity.py_label
         r = 5
         # super-group header (correctly aligned to detail columns)
-        self.cell(ws, r, 3, "GROSS BLOCK", bold=True, center=True, top=True, bottom=True)
+        self.cell(ws, r, 3, "GROSS BLOCK", bold=True, center=True, top=True, bottom=True, fill=HEADER_FILL)
         ws.merge_cells(start_row=r, start_column=3, end_row=r, end_column=5)
-        self.cell(ws, r, 6, "ACCUMULATED DEPRECIATION", bold=True, center=True, top=True, bottom=True)
+        self.cell(ws, r, 6, "ACCUMULATED DEPRECIATION", bold=True, center=True, top=True, bottom=True, fill=HEADER_FILL)
         ws.merge_cells(start_row=r, start_column=6, end_row=r, end_column=8)
-        self.cell(ws, r, 9, "NET BLOCK", bold=True, center=True, top=True, bottom=True)
+        self.cell(ws, r, 9, "NET BLOCK", bold=True, center=True, top=True, bottom=True, fill=HEADER_FILL)
         ws.merge_cells(start_row=r, start_column=9, end_row=r, end_column=10)
         r += 1
         heads = ["Sr.", "Particulars", f"Opening\nas at 01.04", "Additions", f"Closing\nas at {cyl}",
                  f"Opening\nas at 01.04", "For the\nyear", f"Closing\nas at {cyl}",
                  f"Net Block\n{cyl}", f"Net Block\n{pyl}"]
         for j, h in enumerate(heads):
-            self.cell(ws, r, 1 + j, h, bold=True, center=(j > 1), wrap=True, top=True, bottom=True)
+            self.cell(ws, r, 1 + j, h, bold=True, center=(j > 1), wrap=True, top=True, bottom=True, fill=HEADER_FILL)
         ws.row_dimensions[r].height = 46
         r += 1
         first = r
@@ -502,10 +570,12 @@ class Engine:
         for w, wd in {"A": 5, "B": 58, "C": 8, "D": 18, "E": 2, "F": 18}.items():
             ws.column_dimensions[w].width = wd
         self.title_block(ws, f"Balance Sheet as at {self.p.entity.cy_label}")
-        self.cell(ws, 4, 2, "Particulars", bold=True)
-        self.cell(ws, 4, 3, "Note", bold=True, center=True)
-        self.cell(ws, 4, 4, self.p.entity.cy_label, bold=True, center=True)
-        self.cell(ws, 4, 6, self.p.entity.py_label, bold=True, center=True)
+        for _c in range(1, 7):
+            self.cell(ws, 4, _c, None, fill=HEADER_FILL, top=True, bottom=True)
+        self.cell(ws, 4, 2, "Particulars", bold=True, fill=HEADER_FILL, top=True, bottom=True)
+        self.cell(ws, 4, 3, "Note", bold=True, center=True, fill=HEADER_FILL, top=True, bottom=True)
+        self.cell(ws, 4, 4, self.p.entity.cy_label, bold=True, center=True, fill=HEADER_FILL, top=True, bottom=True)
+        self.cell(ws, 4, 6, self.p.entity.py_label, bold=True, center=True, fill=HEADER_FILL, top=True, bottom=True)
         r = 6
         self.cell(ws, r, 1, "I", bold=True)
         self.cell(ws, r, 2, "OWNERS' FUNDS AND LIABILITIES", bold=True)
@@ -568,27 +638,39 @@ class Engine:
         return anchor.split("!")[1]
 
     # -- STATEMENT OF P&L -----------------------------------------------------
+    def _note_sum(self, key, yr):
+        n = self.p.note(key)
+        return round(sum((getattr(i, yr) or 0) for i in n.items), 2) if n else 0.0
+
+    def _pl_profit(self, yr):
+        inc = self._note_sum("revenue", yr) + self._note_sum("other_income", yr)
+        exp = sum(self._note_sum(k, yr) for k in ("cost_materials", "changes_inventory",
+                  "employee_benefits", "finance_costs", "depreciation", "other_expenses"))
+        return round(inc - exp, 2)
+
     def build_pl(self):
         ws = self.ws_pl
         for w, wd in {"A": 5, "B": 58, "C": 8, "D": 18, "E": 2, "F": 18}.items():
             ws.column_dimensions[w].width = wd
         self.title_block(ws, f"Statement of Profit and Loss for the year ended {self.p.entity.cy_label}")
-        self.cell(ws, 4, 2, "Particulars", bold=True)
-        self.cell(ws, 4, 3, "Note", bold=True, center=True)
-        self.cell(ws, 4, 4, f"Year ended {self.p.entity.cy_label}", bold=True, center=True)
-        self.cell(ws, 4, 6, f"Year ended {self.p.entity.py_label}", bold=True, center=True)
+        for _c in range(1, 7):
+            self.cell(ws, 4, _c, None, fill=HEADER_FILL, top=True, bottom=True)
+        self.cell(ws, 4, 2, "Particulars", bold=True, fill=HEADER_FILL, top=True, bottom=True)
+        self.cell(ws, 4, 3, "Note", bold=True, center=True, fill=HEADER_FILL, top=True, bottom=True)
+        self.cell(ws, 4, 4, f"Year ended {self.p.entity.cy_label}", bold=True, center=True, fill=HEADER_FILL, top=True, bottom=True)
+        self.cell(ws, 4, 6, f"Year ended {self.p.entity.py_label}", bold=True, center=True, fill=HEADER_FILL, top=True, bottom=True)
         r = 6
 
-        def line(roman, label, key=None, val_cy=None, val_py=None, bold=False, top=False):
+        def line(roman, label, key=None, val_cy=None, val_py=None, bold=False, top=False, hint_cy=None, hint_py=None):
             nonlocal r
             self.cell(ws, r, 1, roman, bold=bold)
             self.cell(ws, r, 2, label, bold=bold)
             if key and key in self.note_no:
                 self.cell(ws, r, 3, self.note_no[key], center=True)
             if val_cy is not None:
-                self.cell(ws, r, 4, val_cy, num=True, bold=bold, top=top)
+                self.cell(ws, r, 4, val_cy, num=True, bold=bold, top=top, val_hint=hint_cy)
             if val_py is not None:
-                self.cell(ws, r, 6, val_py, num=True, bold=bold, top=top)
+                self.cell(ws, r, 6, val_py, num=True, bold=bold, top=top, val_hint=hint_py)
             rr = r
             r += 1
             return rr
@@ -614,15 +696,20 @@ class Engine:
                     "=" + "+".join(f"D{x}" for x in exp_rows) if exp_rows else "0",
                     "=" + "+".join(f"F{x}" for x in exp_rows) if exp_rows else "0",
                     bold=True, top=True)
+        prof_cy, prof_py = self._pl_profit("cy"), self._pl_profit("py")
         r_pbt = line("V", "Profit before tax (III − IV)", None,
-                     f"=D{r_ti}-D{r_te}", f"=F{r_ti}-F{r_te}", bold=True, top=True)
+                     f"=D{r_ti}-D{r_te}", f"=F{r_ti}-F{r_te}", bold=True, top=True,
+                     hint_cy=prof_cy, hint_py=prof_py)
         if self.firm:
             tax = self.p.firm_tax
             r_tax = line("VI", "Tax expense — Current tax", "st_provisions",
                          round(tax.current_tax_cy, 2) if tax else 0,
                          round(tax.current_tax_py, 2) if tax else 0)
+            tcy = round(tax.current_tax_cy, 2) if tax else 0
+            tpy = round(tax.current_tax_py, 2) if tax else 0
             r_pat = line("VII", "Profit for the year after tax (V − VI)", None,
-                         f"=D{r_pbt}-D{r_tax}", f"=F{r_pbt}-F{r_tax}", bold=True, top=True)
+                         f"=D{r_pbt}-D{r_tax}", f"=F{r_pbt}-F{r_tax}", bold=True, top=True,
+                         hint_cy=round(prof_cy - tcy, 2), hint_py=round(prof_py - tpy, 2))
             self.anchor["np_cy"] = f"Statement of P&L!D{r_pat}"
             self.anchor["np_py"] = f"Statement of P&L!F{r_pat}"
             self._appropriation(ws, r, r_pat)

@@ -19,7 +19,14 @@ Return ONE JSON object, no prose, with this shape:
   "notes": [
     {"key": <schedule-III key>, "title": str,
      "items": [{"label": str, "cy": number, "py": number}],
-     "footnotes": [str]}
+     "footnotes": [str],
+     // OPTIONAL numbered sub-sections, rendered as N.1, N.2 ... under the note.
+     // Use for movement schedules (Opening/Add/Less/Closing), AS-29 disclosures,
+     // or sub-group breakups. A subnote table is shown verbatim (no auto-total),
+     // so include any Closing/Total as its own item.
+     "subnotes": [{"title": str,
+                   "items": [{"label": str, "cy": number, "py": number}],
+                   "footnotes": [str]}]}
   ],
   "owner_capital": {            // proprietorship ONLY
      "name": str,
@@ -89,6 +96,12 @@ Rules for the JSON:
 - ppe net blocks, capital closings, totals, BS/P&L lines are computed by the
   engine via formulas — you only provide leaf figures (note items) and the
   capital/ppe/tax inputs.
+- Nil values: enter 0 - the workbook shows nil as a dash automatically. Amounts use
+  Indian digit grouping and two decimals (handled by the engine; you just give numbers).
+- SUB-NOTES: when the source shows a movement/break-up table beneath a note (e.g.
+  "6.1 Movement in Advance from Customers", provision movements, AS-29 disclosures),
+  put it in that note's "subnotes" so it renders as 6.1, 6.2 ... Reproduce its rows
+  verbatim (Opening / Add / Less / Closing) and include the Closing as an item.
 - Amounts are numbers (no commas, no currency symbols).
 """
 

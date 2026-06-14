@@ -121,11 +121,23 @@ class CapitalLine:
 
 
 @dataclass
+class SubNote:
+    """A numbered sub-section of a note (rendered as N.1, N.2, ...).
+    Use for movement schedules, AS-29 disclosures, sub-group breakups, etc.
+    If `items` is given it renders as its own small table (no auto-total -
+    any closing/total must be supplied as an item). `footnotes` render as prose."""
+    title: str = ""
+    items: List[LineItem] = field(default_factory=list)
+    footnotes: List[str] = field(default_factory=list)
+
+
+@dataclass
 class Note:
     key: str = ""
     title: str = ""
     items: List[LineItem] = field(default_factory=list)
     footnotes: List[str] = field(default_factory=list)
+    subnotes: List["SubNote"] = field(default_factory=list)
 
     def total_cy(self) -> float:
         return round(sum(i.cy for i in self.items), 2)
