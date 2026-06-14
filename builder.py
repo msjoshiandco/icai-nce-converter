@@ -21,7 +21,7 @@ from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.properties import PageSetupProperties
 
-from models import Payload, Note
+from models import Payload, Note, OwnerCapital, SUB_KINDS
 
 FONT_NAME = "Calibri Light"
 NUMFMT = '#,##0.00;(#,##0.00)'
@@ -295,13 +295,16 @@ class Engine:
             "prev_year": "Previous year figures have been regrouped / reclassified wherever necessary to conform to the current year's presentation.",
         }.get(key, "—")
 
-    # -- Capital Account (own landscape sheet) -------------------------------
+    # -- Capital Account (own sheet, VERTICAL format) ------------------------
     def build_capital_sheet(self, num):
         ws = self.ws_cap
-        self._landscape(ws)
         if self.firm:
+            self._landscape(ws)            # multiple partner columns -> wide
             self._capital_partners(ws, num)
         else:
+            ws.page_setup.orientation = "portrait"   # single vertical account
+            ws.page_setup.fitToWidth = 1
+            ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
             self._capital_owner(ws, num)
 
     def _footnotes_wide(self, ws, r, note, span):
@@ -312,87 +315,130 @@ class Engine:
             r += 1
         return r
 
+    def _closing_formula(self, col, add_rows, sub_rows):
+        f = "=" + "+".join(f"{col}{x}" for x in add_rows) if add_rows else "=0"
+        if sub_rows:
+            f += "-" + "-".join(f"{col}{x}" for x in sub_rows)
+        return f
+
     def _capital_owner(self, ws, num):
-        oc = self.p.owner_capital
-        for w, wd in {"A": 3, "B": 30, "C": 16, "D": 16, "E": 17, "F": 16, "G": 16, "H": 17}.items():
+        """Vertical proprietor capital account: every T-format particular kept
+        verbatim (Add / Less prefixes), Closing computed by formula."""
+        oc = self.p.owner_capital or OwnerCapital(name=self.p.entity.name)
+        for w, wd in {"A": 8, "B": 48, "C": 4, "D": 18, "E": 2, "F": 18}.items():
             ws.column_dimensions[w].width = wd
-        self.title_block(ws, f"Note {num} \u2014 Owner's Capital Account", span=8)
-        heads = ["Particulars", "Opening\nBalance", "Capital\nIntroduced",
-                 "Net Profit\nfor the year", "Interest on\nCapital", "Withdrawals", "Closing\nBalance"]
+        self.title_block(ws, f"Note {num} \u2014 Owner's Capital Account", span=6)
         r = 5
-        for j, h in enumerate(heads):
-            self.cell(ws, r, 2 + j, h, bold=True, center=(j > 0), wrap=True, top=True, bottom=True)
-        ws.row_dimensions[r].height = 30
+        self.cell(ws, r, 2, "Particulars", bold=True, bottom=True)
+        self.cell(ws, r, 4, self.p.entity.cy_label, bold=True, center=True, bottom=True)
+        self.cell(ws, r, 6, self.p.entity.py_label, bold=True, center=True, bottom=True)
         r += 1
-        def caprow(label, opening, intro, npref, interest, wd):
-            self.cell(ws, r, 2, label)
-            self.cell(ws, r, 3, round(opening, 2), num=True)
-            self.cell(ws, r, 4, round(intro, 2), num=True)
-            self.cell(ws, r, 5, npref, num=True)
-            self.cell(ws, r, 6, round(interest, 2), num=True)
-            self.cell(ws, r, 7, round(wd, 2), num=True)
-            self.cell(ws, r, 8, f"=C{r}+D{r}+E{r}+F{r}-G{r}", num=True, bold=True)
-        caprow(f"As at {self.p.entity.cy_label}", oc.opening_cy, oc.introduced_cy,
-               "='Statement of P&L'!__NPCY__", oc.interest_cy, oc.withdrawals_cy)
-        self.anchor["note_capital_cy"] = f"Capital Account!H{r}"
-        r += 1
-        caprow(f"As at {self.p.entity.py_label}", oc.opening_py, oc.introduced_py,
-               "='Statement of P&L'!__NPPY__", oc.interest_py, oc.withdrawals_py)
-        self.anchor["note_capital_py"] = f"Capital Account!H{r}"
+        add_rows, sub_rows = [], []
+        for ln in oc.resolved_lines():
+            self.cell(ws, r, 1, ln.prefix())
+            self.cell(ws, r, 2, ln.label)
+            if ln.kind == "profit":
+                self.cell(ws, r, 4, "='Statement of P&L'!__NPCY__", num=True)
+                self.cell(ws, r, 6, "='Statement of P&L'!__NPPY__", num=True)
+            else:
+                self.cell(ws, r, 4, round(ln.cy, 2), num=True)
+                self.cell(ws, r, 6, round(ln.py, 2), num=True)
+            (sub_rows if ln.kind in SUB_KINDS else add_rows).append(r)
+            r += 1
+        self.cell(ws, r, 2, "Closing Balance", bold=True)
+        self.cell(ws, r, 4, self._closing_formula("D", add_rows, sub_rows),
+                  bold=True, num=True, top=True)
+        self.cell(ws, r, 6, self._closing_formula("F", add_rows, sub_rows),
+                  bold=True, num=True, top=True)
+        self.anchor["note_capital_cy"] = f"Capital Account!D{r}"
+        self.anchor["note_capital_py"] = f"Capital Account!F{r}"
         r += 2
         note = self.p.note("capital") or Note(key="capital", title="Owner's Capital Account")
         if not note.footnotes:
             note.footnotes = [
                 "Capital is maintained under the fluctuating capital method; a separate Current Account is not maintained.",
-                "Closing Balance = Opening + Capital Introduced + Net Profit + Interest on Capital - Withdrawals. Net Profit is linked to the Statement of Profit and Loss."]
-        self._footnotes_wide(ws, r, note, span=8)
+                "The account is presented exactly as in the books: items credited or debited "
+                "directly to capital (e.g. interest income, LIC premium, personal drawings) are "
+                "retained here and are not regrouped into the Statement of Profit and Loss.",
+                "Closing Balance is computed by formula; Net Profit for the year is linked to the Statement of Profit and Loss."]
+        self._footnotes_wide(ws, r, note, span=6)
 
     def _capital_partners(self, ws, num):
-        for w, wd in {"A": 3, "B": 26, "C": 7, "D": 14, "E": 13, "F": 13, "G": 13, "H": 14, "I": 13, "J": 15}.items():
+        """Vertical partners' capital account: one value-column-pair per partner
+        plus a Total pair. Each partner keeps its own particulars verbatim."""
+        parts = self.p.partners
+        n = len(parts)
+        # union of (label -> kind), preserving first-seen order
+        kind_of, order = {}, []
+        for pt in parts:
+            for ln in pt.resolved_lines():
+                if ln.label not in kind_of:
+                    kind_of[ln.label] = ln.kind
+                    order.append(ln.label)
+        lut = [{ln.label: ln for ln in pt.resolved_lines()} for pt in parts]
+
+        widths = {"A": 8, "B": 30}
+        for k in range(n + 1):                      # partner pairs + total pair
+            widths[get_column_letter(3 + 2 * k)] = 15
+            widths[get_column_letter(4 + 2 * k)] = 15
+        for w, wd in widths.items():
             ws.column_dimensions[w].width = wd
-        self.title_block(ws, f"Note {num} \u2014 Partners' Capital Account", span=10)
-        heads = ["Partner", "PSR %", "Opening", "Capital\nIntroduced", "Share of\nProfit",
-                 "Interest on\nCapital", "Remuneration", "Withdrawals", "Closing\nBalance"]
+        last_col = 2 + 2 * (n + 1)
+        self.title_block(ws, f"Note {num} \u2014 Partners' Capital Account", span=last_col)
+
+        cyl, pyl = self.p.entity.cy_label, self.p.entity.py_label
         r = 5
-        for j, h in enumerate(heads):
-            self.cell(ws, r, 2 + j, h, bold=True, center=(j > 0), wrap=True, top=True, bottom=True)
-        ws.row_dimensions[r].height = 30
+        # super-header: partner names (+PSR) over their pairs, then Total
+        col = 3
+        for pt in parts:
+            psr = f"  ({pt.psr:g}%)" if pt.psr else ""
+            self.cell(ws, r, col, f"{pt.name}{psr}", bold=True, center=True, top=True, bottom=True)
+            ws.merge_cells(start_row=r, start_column=col, end_row=r, end_column=col + 1)
+            self.cell(ws, r, col + 1, None, top=True, bottom=True)
+            col += 2
+        self.cell(ws, r, col, "Total \u2014 All Partners", bold=True, center=True, top=True, bottom=True)
+        ws.merge_cells(start_row=r, start_column=col, end_row=r, end_column=col + 1)
+        self.cell(ws, r, col + 1, None, top=True, bottom=True)
+        ws.row_dimensions[r].height = 26
         r += 1
-        def block(year, label):
-            nonlocal r
-            self.cell(ws, r, 2, label, bold=True, italic=True)
+        # sub-header: year labels under each pair
+        self.cell(ws, r, 2, "Particulars", bold=True, bottom=True)
+        for k in range(n + 1):
+            self.cell(ws, r, 3 + 2 * k, cyl, bold=True, center=True, bottom=True)
+            self.cell(ws, r, 4 + 2 * k, pyl, bold=True, center=True, bottom=True)
+        r += 1
+        tcol = 3 + 2 * n                            # first Total column (CY)
+        add_rows, sub_rows = [], []
+        for label in order:
+            kind = kind_of[label]
+            prefix = "" if kind == "opening" else ("Less" if kind in SUB_KINDS else "Add")
+            self.cell(ws, r, 1, prefix)
+            self.cell(ws, r, 2, label)
+            for k, m in enumerate(lut):
+                ln = m.get(label)
+                self.cell(ws, r, 3 + 2 * k, round(ln.cy, 2) if ln else 0, num=True)
+                self.cell(ws, r, 4 + 2 * k, round(ln.py, 2) if ln else 0, num=True)
+            cy_cells = "+".join(f"{get_column_letter(3 + 2 * k)}{r}" for k in range(n))
+            py_cells = "+".join(f"{get_column_letter(4 + 2 * k)}{r}" for k in range(n))
+            self.cell(ws, r, tcol, f"={cy_cells}" if cy_cells else 0, num=True)
+            self.cell(ws, r, tcol + 1, f"={py_cells}" if py_cells else 0, num=True)
+            (sub_rows if kind in SUB_KINDS else add_rows).append(r)
             r += 1
-            first = r
-            for pt in self.p.partners:
-                g = lambda a: getattr(pt, f"{a}_{year}") or 0
-                self.cell(ws, r, 2, pt.name)
-                self.cell(ws, r, 3, pt.psr, num=True)
-                self.cell(ws, r, 4, round(g("opening"), 2), num=True)
-                self.cell(ws, r, 5, round(g("introduced"), 2), num=True)
-                self.cell(ws, r, 6, round(g("share_profit"), 2), num=True)
-                self.cell(ws, r, 7, round(g("interest"), 2), num=True)
-                self.cell(ws, r, 8, round(g("remuneration"), 2), num=True)
-                self.cell(ws, r, 9, round(g("withdrawals"), 2), num=True)
-                self.cell(ws, r, 10, f"=D{r}+E{r}+F{r}+G{r}+H{r}-I{r}", num=True)
-                r += 1
-            last = r - 1
-            self.cell(ws, r, 2, "Total", bold=True)
-            for col in (4, 5, 6, 7, 8, 9, 10):
-                L = get_column_letter(col)
-                self.cell(ws, r, col, f"=SUM({L}{first}:{L}{last})", bold=True, num=True, top=True)
-            tot = f"Capital Account!J{r}"
-            r += 2
-            return tot
-        cy = block("cy", f"As at {self.p.entity.cy_label}")
-        py = block("py", f"As at {self.p.entity.py_label}")
-        self.anchor["note_capital_cy"] = cy
-        self.anchor["note_capital_py"] = py
+        # closing row across every value column (partners + total)
+        self.cell(ws, r, 2, "Closing Balance", bold=True)
+        for ci in range(3, 3 + 2 * (n + 1)):
+            L = get_column_letter(ci)
+            self.cell(ws, r, ci, self._closing_formula(L, add_rows, sub_rows),
+                      bold=True, num=True, top=True)
+        self.anchor["note_capital_cy"] = f"Capital Account!{get_column_letter(tcol)}{r}"
+        self.anchor["note_capital_py"] = f"Capital Account!{get_column_letter(tcol + 1)}{r}"
+        r += 2
         note = self.p.note("capital") or Note(key="capital", title="Partners' Capital Account")
         if not note.footnotes:
             note.footnotes = [
-                "Capital is maintained under the fluctuating capital method (one account per partner).",
-                "Withdrawals include actual drawings; prior-year tax paid during the year is routed through Withdrawals for comparability."]
-        self._footnotes_wide(ws, r, note, span=10)
+                "Capital is maintained under the fluctuating capital method (one account per partner), presented vertically.",
+                "Each partner's account shows its own particulars exactly as in the books; Closing Balances are computed by formula."]
+        self._footnotes_wide(ws, r, note, span=last_col)
 
     # -- PPE Schedule (own landscape sheet) ----------------------------------
     def build_ppe_sheet(self, num):
@@ -593,10 +639,10 @@ class Engine:
         self.cell(ws, r, 4, f"=D{r_pat}", num=True)
         self.cell(ws, r, 6, f"=F{r_pat}", num=True)
         r += 1
-        int_cy = sum(p.interest_cy for p in self.p.partners)
-        int_py = sum(p.interest_py for p in self.p.partners)
-        rem_cy = sum(p.remuneration_cy for p in self.p.partners)
-        rem_py = sum(p.remuneration_py for p in self.p.partners)
+        int_cy = sum(p.kind_total("interest", "cy") for p in self.p.partners)
+        int_py = sum(p.kind_total("interest", "py") for p in self.p.partners)
+        rem_cy = sum(p.kind_total("remuneration", "cy") for p in self.p.partners)
+        rem_py = sum(p.kind_total("remuneration", "py") for p in self.p.partners)
         self.cell(ws, r, 2, "(−) Interest on partners' capital")
         self.cell(ws, r, 4, round(int_cy, 2), num=True)
         self.cell(ws, r, 6, round(int_py, 2), num=True); r_int = r; r += 1
@@ -686,7 +732,6 @@ class Engine:
                     content = zin.read(n)
                     if n == "xl/theme/theme1.xml":
                         t = content.decode("utf-8")
-                        # replace minor font typeface
                         t = re.sub(r'(<a:minorFont>\s*<a:latin typeface=")[^"]*"',
                                    r'\g<1>Calibri Light"', t)
                         t = re.sub(r'(<a:majorFont>\s*<a:latin typeface=")[^"]*"',

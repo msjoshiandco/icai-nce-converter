@@ -23,13 +23,20 @@ Return ONE JSON object, no prose, with this shape:
   ],
   "owner_capital": {            // proprietorship ONLY
      "name": str,
-     "opening_cy": n, "introduced_cy": n, "net_profit_cy": n, "interest_cy": n, "withdrawals_cy": n,
-     "opening_py": n, "introduced_py": n, "net_profit_py": n, "interest_py": n, "withdrawals_py": n
+     // Reproduce the proprietor's capital account VERBATIM, line by line, in the
+     // SAME ORDER as the source. One object per line. Do NOT merge lines.
+     "lines": [
+        {"label": str, "kind": "opening"|"profit"|"introduced"|"interest"|"add"|"withdrawals"|"less",
+         "cy": n, "py": n}
+     ]
   },
   "partners": [                 // partnership ONLY
      {"name": str, "psr": n,
-      "opening_cy": n, "introduced_cy": n, "share_profit_cy": n, "interest_cy": n, "remuneration_cy": n, "withdrawals_cy": n,
-      "opening_py": n, "introduced_py": n, "share_profit_py": n, "interest_py": n, "remuneration_py": n, "withdrawals_py": n}
+      // One object per partner. Reproduce that partner's capital account VERBATIM.
+      "lines": [
+         {"label": str, "kind": "opening"|"profit"|"introduced"|"interest"|"remuneration"|"add"|"withdrawals"|"less",
+          "cy": n, "py": n}
+      ]}
   ],
   "ppe_assets": [
      {"name": str, "rate": str, "gb_open": n, "additions": n, "accdep_open": n, "dep_year": n}
@@ -58,6 +65,26 @@ confirmation, prev_year, rounding.
 Rules for the JSON:
 - "capital" note is built from owner_capital / partners — do NOT also put balances
   in a "capital" note's items; you may add footnotes via a {"key":"capital", "items":[], "footnotes":[...]} entry.
+- CAPITAL ACCOUNT LINES (read carefully):
+  * Reproduce the capital account EXACTLY as printed in the T-format source — every
+    credit and every debit as its own line, in source order, with the source's own
+    wording as "label". Do NOT compress the account into a fixed set of headings;
+    it may have many lines (e.g. Opening, Net Profit, Bank Interest, Interest on FD,
+    Agricultural Income, Withdrawals, LIC Premium, Income Tax, Drawings, ...).
+  * "kind" decides the maths and the Add/Less prefix:
+      opening      = the opening balance (added, no prefix)
+      profit       = the business net profit transferred from the P&L (added) —
+                     for a firm this is that partner's Share of Profit
+      introduced   = fresh capital introduced (added)
+      interest     = interest on the OWNER'S/PARTNER'S OWN capital (added)
+      remuneration = partner remuneration (added; firms only)
+      add          = ANY OTHER credit to capital (added) — e.g. FD/bank interest,
+                     dividends, agricultural income, gifts, other personal income
+      withdrawals  = drawings (subtracted)
+      less         = ANY OTHER debit to capital (subtracted) — e.g. LIC premium,
+                     personal income tax, personal insurance
+  * Exactly one line must be kind "profit" (proprietor) / one per partner (firm),
+    and its value must equal the Net Profit / share printed in the source.
 - Only include a note if it has a balance/disclosure in CY or PY (Nil-in-both → omit).
 - ppe net blocks, capital closings, totals, BS/P&L lines are computed by the
   engine via formulas — you only provide leaf figures (note items) and the
@@ -106,19 +133,24 @@ CRITICAL COMPUTATION RULES (these make the Balance Sheet tally — get them righ
   Stock (a SUBTRACTION; it may be negative). NEVER add opening and closing stock
   together. NEVER enter closing stock as a positive expense. Closing stock is an ASSET
   (inventories), not an expense.
-- OTHER INCOME vs CAPITAL INTEREST: bank interest, FD interest and dividend received are
-  OTHER INCOME and are already inside Net Profit. The owner_capital "interest" field (and a
-  partner's "interest" field) means INTEREST ON THE OWNER'S/PARTNER'S OWN CAPITAL only -
-  it is NOT bank/FD interest. For a proprietorship set interest_cy/interest_py = 0 unless
-  the source explicitly credits interest on the proprietor's capital.
-- NET PROFIT must equal Total Income (Revenue + Other Income) minus Total Expenses with
-  inventory netted once.
+- WHERE AN ITEM LIVES — follow the source, do NOT relocate it (CRITICAL):
+  * If an income or expense appears inside the Trading / Profit & Loss account, classify it
+    into the P&L (revenue / other_income / the expense heads).
+  * If the source posted an item DIRECTLY in the Capital Account (i.e. it never went through
+    the P&L) — typically non-business items such as bank/FD interest, dividends, agricultural
+    income, LIC premium, personal income tax, personal drawings — KEEP IT IN THE CAPITAL
+    ACCOUNT as its own line (kind "add" for credits, "less" for debits). Do NOT move it into
+    Other Income or any expense head. Reclassifying it would wrongly change Net Profit.
+  * Consequence: the business Net Profit you report MUST equal the Net Profit printed in the
+    source P&L exactly (no extra capital-account incomes folded in).
+- NET PROFIT = Total Income (Revenue + Other Income that actually appears in the P&L) minus
+  Total Expenses, inventory netted once. This must equal controls.net_profit for each year.
 - CAPITAL CLOSING SELF-CHECK (mandatory): the closing balance of owner_capital (and the sum
   of partners' closings) MUST equal the Capital / Owner's Funds figure shown on the SOURCE
-  Balance Sheet for that year. Closing = Opening + Capital Introduced + Net Profit (incl.
-  Other Income) + Interest on own capital - Withdrawals. If your closing does not equal the
-  source Balance Sheet capital, you have an error - re-check the inventory netting and the
-  interest field, and fix the figures so it reconciles. The whole Balance Sheet must tally.
+  Balance Sheet for that year. Closing = signed sum of every capital-account line you listed
+  (opening + all credits - all debits). Because you keep every capital-account item verbatim,
+  this should tie to the source automatically; if it does not, you have mis-read a line - fix
+  the figures. The whole Balance Sheet must tally.
 - CONTROL TOTALS (the "controls" object is MANDATORY): copy these numbers DIRECTLY from
   the printed source statements - do NOT reconstruct or compute them:
   * bs_total_cy / bs_total_py = the grand TOTAL of the source Balance Sheet for each year.
@@ -130,12 +162,16 @@ CRITICAL COMPUTATION RULES (these make the Balance Sheet tally — get them righ
   if your line items do not reconcile to these control totals the conversion is REJECTED.
 """
 
+
 PROP = r"""
 CONSTITUTION: PROPRIETORSHIP.
 - NO income tax: no tax line, no firm tax provision, no deferred tax. Add a
   policies footnote stating income is assessable in the proprietor's hands.
-- Build owner_capital (single account). net_profit links to the P&L; the engine
-  wires it — still provide your best net_profit numbers for reference.
+- Build owner_capital.lines (single account) reproducing the proprietor's capital
+  account verbatim. The kind "profit" line links to the P&L; the engine wires it.
+  Keep every non-business income/expense the source posted to capital (FD/bank
+  interest, LIC premium, personal tax, drawings) as its own "add"/"less" line -
+  never move them to the P&L, so Net Profit always matches the source.
 - Short-Term Provisions usually suppressed (no firm tax).
 - Always-retained notes: entity, policies, capital, prev_year, rounding;
   ppe & depreciation if any fixed asset exists.
@@ -146,9 +182,10 @@ CONSTITUTION: PARTNERSHIP FIRM.
 - Provide firm current tax @ 33.34% effective (33.3333% in computation) on income
   after Sec 40(b) remuneration & interest, in firm_tax (CY & PY) AND a
   st_provisions note item "Provision for income tax (firm)".
-- Build partners[] with PSR; each partner's share_profit / interest / remuneration
-  feed the Capital Account; Withdrawals column is mandatory.
-- Interest on capital and remuneration are APPROPRIATIONS — never operating
+- Build partners[] with PSR; reproduce EACH partner's capital account verbatim in
+  partner.lines (kinds: opening / introduced / profit (= share of profit) / interest
+  / remuneration / add / withdrawals / less). A Withdrawals line is mandatory.
+- Interest on capital and remuneration are APPROPRIATIONS - never operating
   expenses; do NOT put them in employee_benefits or finance_costs.
 - If self-assessment tax was historically debited to partners' capital in the year
   of payment, restate: PY bears a provision equal to the tax paid in CY; CY bears a
@@ -165,7 +202,6 @@ def system_prompt(constitution: str) -> str:
     return COMMON + "\n" + block + "\n" + JSON_CONTRACT
 
 
-
 CORRECTION_INSTRUCTION = """
 The previous extraction did NOT reconcile to the source. A deterministic reconciliation
 engine found the following differences (each is a hard failure):
@@ -176,8 +212,9 @@ Re-examine the SOURCE statements and the current JSON below. Fix the figures so 
 BOTH years: Total Assets = Total Liabilities = the source Balance Sheet total; the Capital
 closing balance equals the source Balance Sheet capital; Net Profit = Total Income - Total
 Expenses with inventory netted exactly once; and (for a firm) the appropriation ties and
-the tax-restatement chain holds. Do NOT use plug figures or forced balances - find and
-correct the real classification/computation error.
+the tax-restatement chain holds. Keep every item the source posted directly in the Capital
+Account inside the Capital Account (do NOT move it to the P&L). Do NOT use plug figures or
+forced balances - find and correct the real classification/computation error.
 
 Return the COMPLETE corrected JSON object (same schema), nothing else.
 

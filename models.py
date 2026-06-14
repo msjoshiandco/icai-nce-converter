@@ -93,6 +93,33 @@ class LineItem:
     py: float = 0.0
 
 
+# ---- Capital Account line model --------------------------------------------
+# A capital account is now a free list of lines, mirroring the T-format exactly.
+# Each line carries a semantic "kind" that controls (a) whether it is added or
+# subtracted to reach the closing balance and (b) the Add/Less prefix shown.
+#   added   : opening, profit, introduced, interest, remuneration, add
+#   subtracted: withdrawals, less
+ADD_KINDS = {"opening", "profit", "introduced", "interest", "remuneration", "add"}
+SUB_KINDS = {"withdrawals", "less"}
+
+
+@dataclass
+class CapitalLine:
+    label: str = ""
+    kind: str = "add"          # see ADD_KINDS / SUB_KINDS
+    cy: float = 0.0
+    py: float = 0.0
+
+    def signed(self, yr: str) -> float:
+        v = getattr(self, yr) or 0.0
+        return -v if self.kind in SUB_KINDS else v
+
+    def prefix(self) -> str:
+        if self.kind == "opening":
+            return ""
+        return "Less" if self.kind in SUB_KINDS else "Add"
+
+
 @dataclass
 class Note:
     key: str = ""
@@ -113,6 +140,9 @@ class Note:
 @dataclass
 class OwnerCapital:
     name: str = ""
+    # Preferred: a verbatim list of the proprietor's capital-account lines.
+    lines: List[CapitalLine] = field(default_factory=list)
+    # Legacy scalar fields (used only as a fallback when `lines` is empty).
     opening_cy: float = 0.0
     introduced_cy: float = 0.0
     net_profit_cy: float = 0.0
@@ -124,11 +154,30 @@ class OwnerCapital:
     interest_py: float = 0.0
     withdrawals_py: float = 0.0
 
+    def resolved_lines(self) -> List[CapitalLine]:
+        if self.lines:
+            return self.lines
+        out = [CapitalLine("Opening Balance", "opening", self.opening_cy, self.opening_py)]
+        if self.introduced_cy or self.introduced_py:
+            out.append(CapitalLine("Capital Introduced", "introduced",
+                                   self.introduced_cy, self.introduced_py))
+        out.append(CapitalLine("Net Profit for the year", "profit",
+                               self.net_profit_cy, self.net_profit_py))
+        if self.interest_cy or self.interest_py:
+            out.append(CapitalLine("Interest on Capital", "interest",
+                                   self.interest_cy, self.interest_py))
+        out.append(CapitalLine("Withdrawals", "withdrawals",
+                               self.withdrawals_cy, self.withdrawals_py))
+        return out
+
 
 @dataclass
 class PartnerRow:
     name: str = ""
     psr: float = 0.0
+    # Preferred: a verbatim list of this partner's capital-account lines.
+    lines: List[CapitalLine] = field(default_factory=list)
+    # Legacy scalar fields (used only as a fallback when `lines` is empty).
     opening_cy: float = 0.0
     introduced_cy: float = 0.0
     share_profit_cy: float = 0.0
@@ -141,6 +190,29 @@ class PartnerRow:
     interest_py: float = 0.0
     remuneration_py: float = 0.0
     withdrawals_py: float = 0.0
+
+    def resolved_lines(self) -> List[CapitalLine]:
+        if self.lines:
+            return self.lines
+        out = [CapitalLine("Opening Balance", "opening", self.opening_cy, self.opening_py)]
+        if self.introduced_cy or self.introduced_py:
+            out.append(CapitalLine("Capital Introduced", "introduced",
+                                   self.introduced_cy, self.introduced_py))
+        out.append(CapitalLine("Share of Profit", "profit",
+                               self.share_profit_cy, self.share_profit_py))
+        if self.interest_cy or self.interest_py:
+            out.append(CapitalLine("Interest on Capital", "interest",
+                                   self.interest_cy, self.interest_py))
+        if self.remuneration_cy or self.remuneration_py:
+            out.append(CapitalLine("Remuneration", "remuneration",
+                                   self.remuneration_cy, self.remuneration_py))
+        out.append(CapitalLine("Withdrawals", "withdrawals",
+                               self.withdrawals_cy, self.withdrawals_py))
+        return out
+
+    def kind_total(self, kind: str, yr: str) -> float:
+        return round(sum((getattr(l, yr) or 0.0) for l in self.resolved_lines()
+                         if l.kind == kind), 2)
 
 
 @dataclass
@@ -170,13 +242,13 @@ class PLMeta:
 class Controls:
     """Source control totals read directly from the printed source statements.
     Used by the reconciliation engine to assert the converted output matches source."""
-    bs_total_cy: float = 0.0          # source Balance Sheet grand total (CY)
+    bs_total_cy: float = 0.0
     bs_total_py: float = 0.0
-    capital_close_cy: float = 0.0     # source closing capital on the BS (CY); firm = total of all partners
+    capital_close_cy: float = 0.0
     capital_close_py: float = 0.0
-    net_profit_cy: float = 0.0        # source Net Profit per the P&L (CY) (pre-regrouping)
+    net_profit_cy: float = 0.0
     net_profit_py: float = 0.0
-    opening_stock_cy: float = 0.0     # trading account opening stock (CY)
+    opening_stock_cy: float = 0.0
     opening_stock_py: float = 0.0
     closing_stock_cy: float = 0.0
     closing_stock_py: float = 0.0

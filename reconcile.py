@@ -55,20 +55,26 @@ def pl_profit(p: Payload, yr: str) -> float:
 
 
 def capital_closing(p: Payload, yr: str) -> float:
+    """Closing capital = signed sum of every capital-account line, exactly as
+    presented (no merging). For a firm, the sum across all partners."""
     if p.entity.constitution == "partnership":
         tot = 0.0
         for pt in p.partners:
-            g = lambda a: getattr(pt, f"{a}_{yr}") or 0.0
-            tot += (g("opening") + g("introduced") + g("share_profit")
-                    + g("interest") + g("remuneration") - g("withdrawals"))
+            tot += sum(l.signed(yr) for l in pt.resolved_lines())
         return round(tot, 2)
     oc = p.owner_capital
     if not oc:
         return 0.0
-    g = lambda a: getattr(oc, f"{a}_{yr}") or 0.0
-    # net profit in the capital account links to the P&L profit (engine behaviour)
-    return round(g("opening") + g("introduced") + pl_profit(p, yr)
-                 + g("interest") - g("withdrawals"), 2)
+    return round(sum(l.signed(yr) for l in oc.resolved_lines()), 2)
+
+
+def capital_profit_line(p: Payload, yr: str) -> float:
+    """Total of the 'profit' kind line(s) in the proprietor's capital account."""
+    oc = p.owner_capital
+    if not oc:
+        return 0.0
+    return round(sum((getattr(l, yr) or 0.0) for l in oc.resolved_lines()
+                     if l.kind == "profit"), 2)
 
 
 def assets_total(p: Payload, yr: str) -> float:
@@ -116,6 +122,21 @@ def reconcile(p: Payload) -> List[Dict]:
         if src_cap and abs(cap - src_cap) > EPS:
             d.append({"check": "Capital closing balance does not match source Balance Sheet capital",
                       "year": ylabel, "expected": src_cap, "got": cap, "diff": round(cap - src_cap, 2)})
+        # 3a. (proprietorship) Net Profit must equal the source P&L net profit.
+        #     Items the source posted directly to capital (FD/bank interest, LIC
+        #     premium, etc.) stay in the capital account and are NOT reclassified
+        #     into the P&L, so business Net Profit always ties to the T-format.
+        if not firm:
+            src_np = getattr(c, f"net_profit_{yr}") or 0.0
+            plp = pl_profit(p, yr)
+            if src_np and abs(plp - src_np) > EPS:
+                d.append({"check": "Statement of P&L net profit does not match the source Profit & Loss net profit",
+                          "year": ylabel, "expected": src_np, "got": plp, "diff": round(plp - src_np, 2)})
+            # the capital-account 'Net Profit' line must equal the P&L profit
+            cap_np = capital_profit_line(p, yr)
+            if abs(cap_np - plp) > EPS:
+                d.append({"check": "Net Profit shown in the Capital Account ≠ Statement of P&L profit",
+                          "year": ylabel, "expected": plp, "got": cap_np, "diff": round(cap_np - plp, 2)})
         # 4. Case B depreciation reconciliation (CY only, per-asset modelled)
         if p.depreciation_case == "B" and p.ppe_assets:
             dep_sched = dep_for_year_total(p, yr) if yr == "cy" else _note_total(p, "depreciation", "py")
@@ -126,9 +147,9 @@ def reconcile(p: Payload) -> List[Dict]:
                           "diff": round(dep_sched - dep_note, 2)})
         # 5. firm appropriation tie: interest + remuneration + share = PAT
         if firm:
-            int_t = sum(getattr(pt, f"interest_{yr}") or 0 for pt in p.partners)
-            rem_t = sum(getattr(pt, f"remuneration_{yr}") or 0 for pt in p.partners)
-            shr_t = sum(getattr(pt, f"share_profit_{yr}") or 0 for pt in p.partners)
+            int_t = sum(pt.kind_total("interest", yr) for pt in p.partners)
+            rem_t = sum(pt.kind_total("remuneration", yr) for pt in p.partners)
+            shr_t = sum(pt.kind_total("profit", yr) for pt in p.partners)
             tax = 0.0
             if p.firm_tax:
                 tax = getattr(p.firm_tax, f"current_tax_{yr}") or 0.0
@@ -176,17 +197,10 @@ def auto_fix(p: Payload) -> List[str]:
                     ci.items = []
                 fixes.append("Inventory netted into Cost of materials consumed (Opening + Purchases - Closing); Changes in inventories set to nil")
                 break
-    # (b) Bank interest mis-placed in proprietor capital interest column:
-    #     if the capital 'interest' equals the Other Income total, it is bank
-    #     interest (already in profit) wrongly duplicated -> zero it.
-    if p.entity.constitution == "proprietorship" and p.owner_capital:
-        oc = p.owner_capital
-        for yr in ("cy", "py"):
-            oi = _note_total(p, "other_income", yr)
-            iv = getattr(oc, f"interest_{yr}") or 0.0
-            if iv > 0 and abs(iv - oi) <= EPS:
-                setattr(oc, f"interest_{yr}", 0.0)
-                fixes.append(f"Removed bank interest wrongly placed in the capital 'interest on own capital' column ({yr.upper()})")
+    # NOTE: income/expense items the source posted directly in the Capital
+    # Account (FD/bank interest, LIC premium, personal drawings, etc.) are kept
+    # in the Capital Account verbatim and are deliberately NOT moved into the
+    # P&L. No auto-reclassification is performed on capital-account lines.
     return fixes
 
 
