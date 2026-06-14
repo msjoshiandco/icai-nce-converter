@@ -171,10 +171,8 @@ class Engine:
         self.ws_bs = self.wb.create_sheet("Balance Sheet")
         self.ws_pl = self.wb.create_sheet("Statement of P&L")
         self.ws_idx = self.wb.create_sheet("Index")
-        self.ws_cap = self.wb.create_sheet("Capital Account") if "capital" in self.note_no else None
+        self.ws_cap = None   # capital account is now rendered inline within Notes
         self.ws_ppe = self.wb.create_sheet("PPE Schedule") if "ppe" in self.note_no else None
-        if self.ws_cap is not None:
-            self.build_capital_sheet(self.note_no["capital"])
         if self.ws_ppe is not None:
             self.build_ppe_sheet(self.note_no["ppe"])
         self.build_notes()
@@ -189,14 +187,16 @@ class Engine:
         return self._save_with_theme_patch()
 
     def _reorder(self):
-        order = ["Index", "Balance Sheet", "Statement of P&L", "Notes",
-                 "Capital Account", "PPE Schedule"]
+        order = ["Index", "Balance Sheet", "Statement of P&L", "Notes", "PPE Schedule"]
         self.wb._sheets.sort(key=lambda s: order.index(s.title) if s.title in order else 99)
 
     def _highlight_cy(self, ws, col, r1):
-        """Paint a faint vertical band down the current-year amount column."""
+        """Highlight only the current-year FIGURE cells (numbers / formulas),
+        leaving heading, table-header, footnote and sub-note text rows un-shaded."""
         for rr in range(r1, ws.max_row + 1):
-            ws.cell(row=rr, column=col).fill = CY_FILL
+            v = ws.cell(row=rr, column=col).value
+            if isinstance(v, (int, float)) or (isinstance(v, str) and v.startswith("=")):
+                ws.cell(row=rr, column=col).fill = CY_FILL
 
     def _no_gridlines(self):
         for ws in self.wb.worksheets:
@@ -226,16 +226,87 @@ class Engine:
         self.title_block(ws, "Notes forming part of the Financial Statements")
         r = 5
         for key in self.retained:
-            if key in ("capital", "ppe"):
-                continue  # rendered on their own dedicated sheets
+            if key == "ppe":
+                continue  # PPE keeps its own dedicated landscape sheet
             num = self.note_no[key]
-            if key in ("entity", "policies", "prev_year", "rounding",
-                       "segment", "related_party", "contingent", "msmed",
-                       "forex", "confirmation", "dtl", "dta"):
+            if key == "capital":
+                r = self._note_capital(ws, r, num)
+            elif key in ("entity", "policies", "prev_year", "rounding",
+                         "segment", "related_party", "contingent", "msmed",
+                         "forex", "confirmation", "dtl", "dta"):
                 r = self._note_prose(ws, r, num, key)
             else:
                 r = self._note_standard(ws, r, num, key)
         self.notes_last_row = r
+
+    # -- Capital Account (rendered inline within Notes) ----------------------
+    def _note_capital(self, ws, r, num):
+        note = self.p.note("capital")
+        title = (note.title if note and note.title else
+                 ("Partners' Capital Account" if self.firm else "Owner's Capital Account"))
+        self.cell(ws, r, 1, f"Note {num}", bold=True)
+        self.cell(ws, r, 2, title, bold=True)
+        r += 1
+        if self.firm:
+            r = self._cap_inline_partners(ws, r)
+        else:
+            r = self._cap_inline_owner(ws, r)
+        if note:
+            r = self._footnotes(ws, r, note)
+        return r + 1
+
+    def _cap_inline_owner(self, ws, r):
+        oc = self.p.owner_capital or OwnerCapital(name=self.p.entity.name)
+        r = self._table_header(ws, r)
+        add_rows, sub_rows = [], []
+        for ln in oc.resolved_lines():
+            self.cell(ws, r, 1, ln.prefix())
+            self.cell(ws, r, 2, ln.label)
+            if ln.kind == "profit":
+                self.cell(ws, r, 4, "='Statement of P&L'!__NPCY__", num=True)
+                self.cell(ws, r, 6, "='Statement of P&L'!__NPPY__", num=True)
+            else:
+                self.cell(ws, r, 4, round(ln.cy, 2), num=True)
+                self.cell(ws, r, 6, round(ln.py, 2), num=True)
+            (sub_rows if ln.kind in SUB_KINDS else add_rows).append(r)
+            r += 1
+        cl_cy = sum(l.signed("cy") for l in oc.resolved_lines())
+        cl_py = sum(l.signed("py") for l in oc.resolved_lines())
+        self.cell(ws, r, 2, "Closing Balance", bold=True)
+        self.cell(ws, r, 4, self._closing_formula("D", add_rows, sub_rows), bold=True, num=True, top=True, val_hint=cl_cy)
+        self.cell(ws, r, 6, self._closing_formula("F", add_rows, sub_rows), bold=True, num=True, top=True, val_hint=cl_py)
+        self.anchor["note_capital_cy"] = f"Notes!D{r}"
+        self.anchor["note_capital_py"] = f"Notes!F{r}"
+        return r + 1
+
+    def _cap_inline_partners(self, ws, r):
+        cls_cy, cls_py = [], []
+        for pt in self.p.partners:
+            psr = f"  ({pt.psr:g}%)" if pt.psr else ""
+            self.cell(ws, r, 2, f"{pt.name}{psr}", bold=True, italic=True)
+            r += 1
+            r = self._table_header(ws, r)
+            add_rows, sub_rows = [], []
+            for ln in pt.resolved_lines():
+                self.cell(ws, r, 1, ln.prefix())
+                self.cell(ws, r, 2, ln.label)
+                self.cell(ws, r, 4, round(ln.cy, 2), num=True)
+                self.cell(ws, r, 6, round(ln.py, 2), num=True)
+                (sub_rows if ln.kind in SUB_KINDS else add_rows).append(r)
+                r += 1
+            ccy = sum(l.signed("cy") for l in pt.resolved_lines())
+            cpy = sum(l.signed("py") for l in pt.resolved_lines())
+            self.cell(ws, r, 2, "Closing Balance", bold=True)
+            self.cell(ws, r, 4, self._closing_formula("D", add_rows, sub_rows), bold=True, num=True, top=True, val_hint=ccy)
+            self.cell(ws, r, 6, self._closing_formula("F", add_rows, sub_rows), bold=True, num=True, top=True, val_hint=cpy)
+            cls_cy.append(f"D{r}"); cls_py.append(f"F{r}")
+            r += 2
+        self.cell(ws, r, 2, "Total Partners' Capital", bold=True)
+        self.cell(ws, r, 4, "=" + "+".join(cls_cy), bold=True, num=True, top=True, double_bottom=True)
+        self.cell(ws, r, 6, "=" + "+".join(cls_py), bold=True, num=True, top=True, double_bottom=True)
+        self.anchor["note_capital_cy"] = f"Notes!D{r}"
+        self.anchor["note_capital_py"] = f"Notes!F{r}"
+        return r + 1
 
     def _note_title(self, ws, r, num, title, with_years=True):
         self.cell(ws, r, 1, f"Note {num}", bold=True)
@@ -752,8 +823,8 @@ class Engine:
         # Owner capital placeholders were written as formulas with __NPCY__/__NPPY__
         np_cy = self.anchor.get("np_cy")
         np_py = self.anchor.get("np_py")
-        if not self.firm and np_cy and getattr(self, "ws_cap", None) is not None:
-            ws = self.ws_cap
+        if not self.firm and np_cy and getattr(self, "ws_notes", None) is not None:
+            ws = self.ws_notes
             for row in ws.iter_rows():
                 for c in row:
                     if isinstance(c.value, str) and "__NPCY__" in c.value:
@@ -773,8 +844,6 @@ class Engine:
         nav = [("Balance Sheet", "Balance Sheet"),
                ("Statement of Profit and Loss", "Statement of P&L"),
                ("Notes to the Financial Statements", "Notes")]
-        if getattr(self, "ws_cap", None) is not None:
-            nav.append((f"Note {self.note_no['capital']} - Capital Account", "Capital Account"))
         if getattr(self, "ws_ppe", None) is not None:
             nav.append((f"Note {self.note_no['ppe']} - Property, Plant and Equipment", "PPE Schedule"))
         for label, sheet in nav:
