@@ -764,6 +764,7 @@ class Engine:
         self.cell(ws, r, 6, "=" + ("+".join(f"F{x}" for x in asset_rows) or "0"), bold=True, num=True, top=True, double_bottom=True)
         r += 2
         self.cell(ws, r, 2, "The accompanying notes are an integral part of the financial statements.", italic=True)
+        self._signature_block(ws, r)
 
     def _bs_block(self, ws, r, plan):
         subtotal_rows = []
@@ -886,6 +887,7 @@ class Engine:
             self.cell(ws, r_pbt, 2, "Profit for the year (= V)", bold=True)
             self.anchor["np_cy"] = f"Statement of P&L!D{r_pbt}"
             self.anchor["np_py"] = f"Statement of P&L!F{r_pbt}"
+        self._signature_block(ws, ws.max_row + 1)
         self._wire_capital_profit()
 
     def _appropriation(self, ws, r, r_pat):
@@ -915,6 +917,41 @@ class Engine:
         if not a:
             return 0
         return f"='{self._sheet(a)}'!{self._addr(a)}"
+
+    def _signature_block(self, ws, start_r):
+        """Signing area below BS / P&L: auditors (left) and assessee (right).
+        Names, FRN, Membership No., UDIN, Place and Date are left blank to fill."""
+        e = self.p.entity
+        r = start_r + 2
+        self.cell(ws, r, 2, "As per our report of even date attached.", italic=True)
+        r += 2
+        self.cell(ws, r, 2, "For", bold=True)
+        self.cell(ws, r, 4, "For and on behalf of", bold=True)
+        r += 1
+        self.cell(ws, r, 2, "Chartered Accountants")
+        self.cell(ws, r, 4, e.name or "", bold=True)
+        r += 1
+        self.cell(ws, r, 2, "Firm Registration No. :")
+        r += 4                                   # blank space to sign / write names
+        self.cell(ws, r, 2, "Partner")
+        if self.firm:
+            col = 4
+            for _pt in (self.p.partners or [None, None]):
+                self.cell(ws, r, col, "Partner")
+                col += 1
+        else:
+            self.cell(ws, r, 4, "Proprietor")
+        r += 1
+        self.cell(ws, r, 2, "Membership No. :")
+        r += 1
+        self.cell(ws, r, 2, "UDIN :")
+        r += 1
+        self.cell(ws, r, 2, "Place :")
+        self.cell(ws, r, 4, "Place :")
+        r += 1
+        self.cell(ws, r, 2, "Date :")
+        self.cell(ws, r, 4, "Date :")
+        return r
 
     def _wire_capital_profit(self):
         """Replace capital-account profit placeholders with real P&L links."""
