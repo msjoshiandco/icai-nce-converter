@@ -114,24 +114,27 @@ class Engine:
         self.note_no: Dict[str, int] = {}
         self.retained: List[str] = []
         self.numcell: Dict[str, str] = {}     # note key -> "AD{row}" on Notes
-        # (value_scale, display_suffix, caption_word, threshold_multiplier)
-        cfg = {
-            "actual":    (1.0,  "",   "",             1),
-            "thousands": (1.0,  ",",  "in thousands",  1000),
-            "millions":  (1.0,  ",,", "in millions",   1000000),
-            "lakhs":     (1e-5, "",   "in lakhs",      1),
-            "crores":    (1e-7, "",   "in crores",     1),
-        }.get((denomination or "actual").lower(), (1.0, "", "", 1))
-        self.denom_scale, self.denom_suffix, self.denom_word, _D = cfg
-        # thousands/millions scale DISPLAY only (cells stay absolute); lakhs/crores scale the value.
-        # Thresholds are multiplied by _D so the Indian grouping matches the DISPLAYED magnitude.
-        suf = self.denom_suffix
-        cr, lk = int(1e7 * _D), int(1e5 * _D)
-        self.POS = (f'[>={cr}]##\\,##\\,##\\,##0.00{suf};'
-                    f'[>={lk}]##\\,##\\,##0.00{suf};##,##0.00{suf}')
-        self.NEG = (f'[<=-{cr}](##\\,##\\,##\\,##0.00{suf});'
-                    f'[<=-{lk}](##\\,##\\,##0.00{suf});(##,##0.00{suf})')
-        self.ZERO = '"-"' 
+        # Every denomination is DISPLAY-ONLY: the cell always keeps the absolute value.
+        # thousands/millions scale via trailing commas; lakhs/crores via the comma+pseudo-decimal
+        # trick (one trailing comma = /1000, then the last digits read as decimals).
+        denom = (denomination or "actual").lower()
+        self.denom_scale = 1.0
+        self.denom_word = {"thousands": "in thousands", "millions": "in millions",
+                           "lakhs": "in lakhs", "crores": "in crores"}.get(denom, "")
+        self.POS, self.NEG, self.ZERO = POS_FMT, NEG_FMT, ZERO_FMT
+        self.combined = None
+        if denom == "lakhs":
+            self.combined = r'0"."00,;(0"."00,);"-"'        # /1,00,000, two decimals
+        elif denom == "crores":
+            self.combined = r'0"."0,,;(0"."0,,);"-"'        # /1,00,00,000, one decimal
+        elif denom in ("thousands", "millions"):
+            suf = "," if denom == "thousands" else ",,"
+            _D = 1000 if denom == "thousands" else 1000000
+            cr, lk = int(1e7 * _D), int(1e5 * _D)
+            self.POS = (f'[>={cr}]##\\,##\\,##\\,##0.00{suf};'
+                        f'[>={lk}]##\\,##\\,##0.00{suf};##,##0.00{suf}')
+            self.NEG = (f'[<=-{cr}](##\\,##\\,##\\,##0.00{suf});'
+                        f'[<=-{lk}](##\\,##\\,##0.00{suf});(##,##0.00{suf})')
 
     # -- styling helpers ------------------------------------------------------
     def _f(self, bold=False, italic=False, size=11, color=None):
@@ -153,12 +156,15 @@ class Engine:
         if fill is not None:
             cl.fill = fill
         if num:
-            hint = val if isinstance(val, (int, float)) else (
-                val_hint * self.denom_scale if isinstance(val_hint, (int, float)) else None)
-            if isinstance(hint, (int, float)):
-                cl.number_format = self.ZERO if abs(hint) < 0.005 else (self.NEG if hint < 0 else self.POS)
+            if self.combined:
+                cl.number_format = self.combined
             else:
-                cl.number_format = self.POS
+                hint = val if isinstance(val, (int, float)) else (
+                    val_hint * self.denom_scale if isinstance(val_hint, (int, float)) else None)
+                if isinstance(hint, (int, float)):
+                    cl.number_format = self.ZERO if abs(hint) < 0.005 else (self.NEG if hint < 0 else self.POS)
+                else:
+                    cl.number_format = self.POS
         b = {}
         if top: b["top"] = THIN
         if bottom: b["bottom"] = THIN
