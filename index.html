@@ -20,7 +20,10 @@ a{color:var(--teal);text-decoration:none;}
 a:hover{text-decoration:underline;}
 
 .topbar{background:#fff;text-align:center;padding:22px 20px 16px;border-top:4px solid var(--amber);box-shadow:0 1px 0 var(--line);}
-.logo{max-height:88px;max-width:92%;}
+.logo{max-height:78px;max-width:100%;}
+.logos{display:flex;justify-content:center;align-items:center;gap:30px;flex-wrap:wrap;}
+.firm{display:inline-flex;align-items:center;}
+.logo-sep{width:1px;height:64px;background:var(--line);}
 .logo-fallback{display:none;}
 .logo-fallback h1{margin:0;font-size:30px;font-weight:800;color:var(--heading);letter-spacing:.5px;}
 .logo-fallback p{margin:2px 0 0;font-size:14px;font-weight:700;color:#8a8f6e;letter-spacing:3px;text-transform:uppercase;}
@@ -114,6 +117,7 @@ details.review textarea{margin-top:10px;min-height:240px;font-family:Consolas,mo
 .review-actions{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;}
 
 footer{background:var(--header);color:#c6d2df;margin-top:34px;}
+.partners-line{max-width:1120px;margin:0 auto;padding:0 22px 4px;font-size:13px;color:#dbe4ee;font-weight:700;}
 .foot{max-width:1120px;margin:0 auto;padding:32px 22px;display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:28px;}
 .foot h4{color:var(--amber);margin:0 0 12px;font-size:13px;letter-spacing:1.2px;font-weight:700;}
 .foot div p{margin:5px 0;font-size:13px;}
@@ -134,10 +138,16 @@ footer{background:var(--header);color:#c6d2df;margin-top:34px;}
 </head>
 <body>
 <div class="topbar">
-  <img class="logo" src="/static/logo.png" alt="M S Joshi & Co." onerror="this.style.display='none';document.getElementById('lf').style.display='block';">
-  <div class="logo-fallback" id="lf">
-    <h1>M S JOSHI &amp; Co.</h1><p>Chartered Accountants</p>
-    <small>(Certified by Peer Review Board — ICAI)</small>
+  <div class="logos">
+    <span class="firm">
+      <img class="logo" src="/static/logo.png" alt="M S Joshi & Co." onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+      <span class="logo-fallback"><h1>M S JOSHI &amp; Co.</h1><p>Chartered Accountants</p></span>
+    </span>
+    <span class="logo-sep"></span>
+    <span class="firm">
+      <img class="logo" src="/static/asar-logo.png" alt="ASAR & CO. Chartered Accountants" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+      <span class="logo-fallback"><h1>ASAR &amp; CO.</h1><p>Chartered Accountants</p></span>
+    </span>
   </div>
   <div><span class="badge">ICAI NCE Converter</span></div>
 </div>
@@ -156,9 +166,9 @@ footer{background:var(--header);color:#c6d2df;margin-top:34px;}
           <p class="sub" style="margin:0">Upload your two-year T-format statements and convert them to the ICAI NCE format in seconds. For an access code or assistance, contact us:</p>
         </div>
         <div class="r">
-          <b>M S Joshi &amp; Co., Chartered Accountants</b><br>
-          +91 96240 94390 &nbsp;|&nbsp; <a href="https://msjc.in" target="_blank">msjc.in</a><br>
-          <a href="mailto:connect@msjc.in">connect@msjc.in</a> &nbsp;|&nbsp; <a href="mailto:msjoshiandco@gmail.com">msjoshiandco@gmail.com</a>
+          <b>+91 96240 94390</b><br>
+          Email: <a href="mailto:caoffice.arm@gmail.com">caoffice.arm@gmail.com</a>, <a href="mailto:connect@msjc.in">connect@msjc.in</a>, <a href="mailto:connect@aanc.in">connect@aanc.in</a><br>
+          Website: <a href="https://msjc.in" target="_blank">msjc.in</a>, <a href="https://asarca.in" target="_blank">asarca.in</a>
         </div>
       </div>
     </div>
@@ -278,16 +288,17 @@ footer{background:var(--header);color:#c6d2df;margin-top:34px;}
 
 <footer>
   <div class="foot">
-    <div><h4>CONTACT</h4>
+    <div><h4>FIRMS</h4>
       <p><b style="color:#fff">M S Joshi &amp; Co.</b></p>
+      <p><b style="color:#fff">ASAR &amp; CO.</b></p>
       <p>Chartered Accountants</p>
-      <p>(Certified by Peer Review Board — ICAI)</p>
       <p>+91 96240 94390</p>
     </div>
     <div><h4>ONLINE</h4>
-      <p><a href="https://msjc.in" target="_blank">msjc.in</a></p>
+      <p><a href="https://msjc.in" target="_blank">msjc.in</a>, <a href="https://asarca.in" target="_blank">asarca.in</a></p>
+      <p><a href="mailto:caoffice.arm@gmail.com">caoffice.arm@gmail.com</a></p>
       <p><a href="mailto:connect@msjc.in">connect@msjc.in</a></p>
-      <p><a href="mailto:msjoshiandco@gmail.com">msjoshiandco@gmail.com</a></p>
+      <p><a href="mailto:connect@aanc.in">connect@aanc.in</a></p>
     </div>
     <div><h4>OFFICE</h4>
       <p>808-809, Avadh Kontina,</p>
@@ -295,7 +306,8 @@ footer{background:var(--header);color:#c6d2df;margin-top:34px;}
       <p>VIP Road, Surat – 395007</p>
     </div>
   </div>
-  <div class="copy"><b>M S Joshi &amp; Co.</b> — Chartered Accountants (Certified by Peer Review Board — ICAI) &nbsp;&bull;&nbsp; 808-809, Avadh Kontina, Canal Road Corner, Near C B Patel Club, VIP Road, Surat – 395007 &nbsp;&bull;&nbsp; +91 96240 94390 &nbsp;&bull;&nbsp; msjc.in &nbsp;&bull;&nbsp; connect@msjc.in &nbsp;&bull;&nbsp; Powered by Claude AI</div>
+  <div class="partners-line">Partners: CA. Mehul Joshi &nbsp;&bull;&nbsp; CA. Akash Agarwal &nbsp;&bull;&nbsp; CA. Ritesh Singhal</div>
+  <div class="copy">Developed by <b>M S Joshi &amp; Co.</b> &amp; <b>ASAR &amp; CO.</b> — Chartered Accountants &nbsp;&bull;&nbsp; 808-809, Avadh Kontina, Canal Road Corner, Near C B Patel Club, VIP Road, Surat – 395007 &nbsp;&bull;&nbsp; +91 96240 94390 &nbsp;&bull;&nbsp; msjc.in, asarca.in &nbsp;&bull;&nbsp; Powered by Claude AI</div>
 </footer>
 <script>
 var CONS='proprietorship';
