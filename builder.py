@@ -18,7 +18,7 @@ import io, zipfile, re
 from typing import Dict, Tuple, List
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
-from openpyxl.utils import get_column_letter
+from openpyxl.utils import get_column_letter, column_index_from_string
 from openpyxl.worksheet.properties import PageSetupProperties
 from openpyxl.worksheet.page import PageMargins
 
@@ -181,7 +181,7 @@ class Engine:
             keep = False
             if key in ALWAYS_RETAINED:
                 keep = True
-            elif key in ("ppe", "depreciation") and has_ppe:
+            elif key == "ppe" and has_ppe:
                 keep = True
             elif key == "st_provisions" and self.firm:
                 keep = True  # firm tax provision
@@ -202,11 +202,11 @@ class Engine:
         self.ws_idx = self.wb.create_sheet("Index")
         self.ws_cap = None   # capital account is now rendered inline within Notes
         self.ws_ppe = self.wb.create_sheet("PPE Schedule") if "ppe" in self.note_no else None
-        self._build_numbering()
         self._denomination_footnote()
         if self.ws_ppe is not None:
             self.build_ppe_sheet(self.note_no["ppe"])
         self.build_notes()
+        self._wire_numbering()          # chain the editable "Note N" heading cells
         self.build_balance_sheet()
         self.build_pl()
         self.build_index()
@@ -251,23 +251,43 @@ class Engine:
             return f"(Amount in Rs. {self.denom_word}, except as otherwise stated)"
         return "(Amount in Rs., except as otherwise stated)"
 
-    def _build_numbering(self):
-        col = 30  # column AD on the Notes sheet (hidden) holds the live note numbers
-        for i, key in enumerate(self.retained):
-            row = i + 1
-            cl = self.ws_notes.cell(row=row, column=col,
-                                    value=(1 if i == 0 else f"=AD{row-1}+1"))
-            cl.font = self._f()
-            self.numcell[key] = f"AD{row}"
-        self.ws_notes.column_dimensions["AD"].hidden = True
+    def _note_number_cell(self, ws, r, key, col=1):
+        """Editable heading number: holds the numeric value, displayed as 'Note N'
+        via the "Note "0 format. Chained to the previous note by _wire_numbering."""
+        c = self.cell(ws, r, col, 0, bold=True)
+        c.number_format = '"Note "0'
+        self.numcell[key] = (ws.title, get_column_letter(col), r)
+        return c
 
-    def _heading_formula(self, key):
-        cell = self.numcell.get(key)
-        return f'="Note "&{cell}' if cell else f"Note {self.note_no.get(key, '')}"
+    def _wire_numbering(self):
+        """Write each heading number as =<previous note's cell>+1 (first = 1), in
+        Schedule-III order, crossing sheets for the PPE note. Editing any one cell
+        renumbers every following note (and their references) automatically."""
+        prev = None
+        for key in self.retained:
+            sheet, col_letter, row = self.numcell[key]
+            ws = self.wb[sheet]
+            col = column_index_from_string(col_letter)
+            if prev is None:
+                val = 1
+            else:
+                ps, pcl, prow = prev
+                pref = f"{pcl}{prow}"
+                val = f"={pref if ps == sheet else chr(39)+ps+chr(39)+'!'+pref}+1"
+            c = ws.cell(row=row, column=col, value=val)
+            c.font = self._f(bold=True)
+            c.number_format = '"Note "0'
+            prev = (sheet, col_letter, row)
+
+    def _numref(self, key, local_sheet=None):
+        sheet, col_letter, row = self.numcell[key]
+        ref = f"{col_letter}{row}"
+        return ref if local_sheet == sheet else f"'{sheet}'!{ref}"
 
     def _subnum(self, key, k):
-        cell = self.numcell.get(key)
-        return f'={cell}&".{k}"' if cell else f"{self.note_no.get(key, '')}.{k}"
+        if key in self.numcell:
+            return f'={self._numref(key, "Notes")}&".{k}"'
+        return f"{self.note_no.get(key, '')}.{k}"
 
     def _denomination_footnote(self):
         if not self.denom_word:
@@ -322,7 +342,7 @@ class Engine:
     # -- NOTES ----------------------------------------------------------------
     def build_notes(self):
         ws = self.ws_notes
-        for w, wd in {"A": 6, "B": 52, "C": 4, "D": 18, "E": 2, "F": 18}.items():
+        for w, wd in {"A": 8, "B": 50, "C": 4, "D": 18, "E": 2, "F": 18}.items():
             ws.column_dimensions[w].width = wd
         self.title_block(ws, "Notes forming part of the Financial Statements")
         r = 5
@@ -345,7 +365,7 @@ class Engine:
         note = self.p.note("capital")
         title = (note.title if note and note.title else
                  ("Partners' Capital Account" if self.firm else "Owner's Capital Account"))
-        self.cell(ws, r, 1, self._heading_formula("capital"), bold=True)
+        self._note_number_cell(ws, r, "capital")
         self.cell(ws, r, 2, title, bold=True)
         r += 1
         if self.firm:
@@ -431,7 +451,7 @@ class Engine:
         if note is None:
             return r
         # heading row, kept separate from the table
-        self.cell(ws, r, 1, self._heading_formula(key), bold=True)
+        self._note_number_cell(ws, r, key)
         self.cell(ws, r, 2, note.title, bold=True)
         r += 1
         # shaded table header
@@ -491,7 +511,7 @@ class Engine:
     def _note_prose(self, ws, r, num, key):
         note = self.p.note(key)
         title = note.title if note else self._default_title(key)
-        self.cell(ws, r, 1, self._heading_formula(key), bold=True)
+        self._note_number_cell(ws, r, key)
         self.cell(ws, r, 2, title, bold=True)
         r += 1
         if note and note.footnotes:
@@ -683,9 +703,12 @@ class Engine:
         self._landscape(ws)
         for w, wd in {"A": 4, "B": 30, "C": 14, "D": 13, "E": 14, "F": 14, "G": 13, "H": 14, "I": 14, "J": 14}.items():
             ws.column_dimensions[w].width = wd
-        self.title_block(ws, f'="Note "&Notes!{self.numcell["ppe"]}&" \u2014 Property, Plant and Equipment"', span=10)
+        self.title_block(ws, "", span=10)
         cyl, pyl = self.p.entity.cy_label, self.p.entity.py_label
         r = 5
+        self._note_number_cell(ws, r, "ppe", col=2)
+        self.cell(ws, r, 3, "Property, Plant and Equipment", bold=True)
+        r += 1
         # super-group header (correctly aligned to detail columns)
         self.cell(ws, r, 3, "GROSS BLOCK", bold=True, center=True, top=True, bottom=True, fill=HEADER_FILL)
         ws.merge_cells(start_row=r, start_column=3, end_row=r, end_column=5)
@@ -784,7 +807,7 @@ class Engine:
                     continue
                 self.cell(ws, r, 2, lbl)
                 if key in self.note_no:
-                    self.cell(ws, r, 3, f"=Notes!{self.numcell[key]}", center=True)
+                    self.cell(ws, r, 3, f"={self._numref(key)}", center=True)
                 self.cell(ws, r, 4, f"='{self._sheet(cy_anchor)}'!{self._addr(cy_anchor)}", num=True)
                 py_anchor = self.anchor.get(f"note_{key}_py")
                 self.cell(ws, r, 6, f"='{self._sheet(py_anchor)}'!{self._addr(py_anchor)}", num=True)
@@ -836,7 +859,7 @@ class Engine:
             self.cell(ws, r, 1, roman, bold=bold)
             self.cell(ws, r, 2, label, bold=bold)
             if key and key in self.note_no:
-                self.cell(ws, r, 3, f"=Notes!{self.numcell[key]}", center=True)
+                self.cell(ws, r, 3, f"={self._numref(key)}", center=True)
             if val_cy is not None:
                 self.cell(ws, r, 4, val_cy, num=True, bold=bold, top=top, val_hint=hint_cy)
             if val_py is not None:
@@ -991,7 +1014,7 @@ class Engine:
         self.cell(ws, r, 2, "Note index", bold=True); r += 1
         for key in self.retained:
             _lbl = self._note_label(key).replace(chr(34), "'")
-            self.cell(ws, r, 2, f'="Note "&Notes!{self.numcell[key]}&"  {_lbl}"')
+            self.cell(ws, r, 2, f'="Note "&{self._numref(key)}&"  {_lbl}"')
             r += 1
 
     def _note_label(self, key):
