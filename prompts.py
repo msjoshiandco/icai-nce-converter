@@ -129,12 +129,18 @@ UNIVERSAL RULES
   interest on loans/statutory dues → finance_costs.
 - Sign convention: all amounts positive except natural negatives (accumulated
   loss, a partner's debit capital balance).
-- Depreciation: if the P&L has NO depreciation charge → depreciation_case "A"
-  (treat fixed-asset balances as gross block, accdep_open=0, dep_year=0, derive
-  additions from CY-vs-PY). If the P&L HAS depreciation → depreciation_case "B"
-  and you must use the asset-wise chart figures (gb_open, additions, accdep_open,
-  dep_year). If Case B and no chart is provided, set depreciation_case "B" and add
-  an entity footnote "WARNING: depreciation chart required".
+- Depreciation / fixed assets — pick the case by what the SOURCE provides:
+  * depreciation_case "B" ONLY when the source gives an asset-wise depreciation
+    SCHEDULE (per-asset opening WDV/gross block, additions, and depreciation for the
+    year). Then supply gb_open, additions, accdep_open, dep_year per asset AND put the
+    depreciation charge in the "depreciation" note.
+  * depreciation_case "A" in every other case — including when the P&L DOES carry a
+    depreciation expense but the fixed assets are shown only at NET written-down values
+    (commonly with a rate% beside each asset name and no movement columns). List each
+    asset in ppe_assets at its NET value as gb_open, with additions=accdep_open=dep_year=0.
+    If the P&L has a depreciation line, put that amount in the "depreciation" note; it is a
+    P&L charge only and is NOT reconciled to a per-asset schedule. Never set Case "B"
+    without a real asset-wise chart.
 - Previous Year Figures and Rounding-off notes are always present.
 - Do NOT invent figures. Do NOT create disclosures without basis.
 - Currency: always write "Rs." - never the rupee symbol. In footnotes/policies, write each
@@ -148,6 +154,27 @@ CRITICAL COMPUTATION RULES (these make the Balance Sheet tally — get them righ
   Stock (a SUBTRACTION; it may be negative). NEVER add opening and closing stock
   together. NEVER enter closing stock as a positive expense. Closing stock is an ASSET
   (inventories), not an expense.
+- TRADING + PROFIT & LOSS (T-format) MAPPING (read the columns carefully):
+  * Many sources show a TWO-STAGE account: a Trading Account (debit: Opening Stock,
+    Purchases net of discounts, Direct Expenses, Gross Profit c/d; credit: Sales,
+    Closing Stock) followed by a Profit & Loss Account (debit: Indirect Expenses,
+    Net Profit; credit: Gross Profit b/d, Indirect Incomes).
+  * COLUMN STRUCTURE: each head lists its components in an INNER column and the head
+    SUBTOTAL in the OUTER column (e.g. several "GST Purchase / IGST Purchase / SEZ
+    Purchase" lines, then a Purchases subtotal). Use ONLY the outer SUBTOTAL for that
+    head. NEVER add the inner components on top of the subtotal — doing so inflates the
+    figure many times over.
+  * MAP: Sales (net) -> revenue. Indirect Incomes -> other_income. Cost of materials
+    consumed = Opening Stock + Purchases (net of MOU/quantity/price/rate-difference
+    discounts and shortages) - Closing Stock -> put this ONE figure in cost_materials and
+    OMIT changes_inventory. Direct Expenses (power, freight, job-work, packing, customs)
+    -> other_expenses. Indirect Expenses -> classify line by line: depreciation ->
+    depreciation; salary/wages/PF/labour/staff-welfare -> employee_benefits; interest &
+    finance charges -> finance_costs; everything else -> other_expenses.
+  * SANITY CHECK before you answer: Revenue + Other income - (Cost of materials + Direct
+    + Indirect expenses) MUST equal the printed Net Profit (controls.net_profit) for each
+    year. If your computed profit is hundreds of times larger or smaller than the Balance
+    Sheet total, you mis-read a column — re-read the subtotals and fix it.
 - WHERE AN ITEM LIVES — follow the source, do NOT relocate it (CRITICAL):
   * If an income or expense appears inside the Trading / Profit & Loss account, classify it
     into the P&L (revenue / other_income / the expense heads).
@@ -194,14 +221,28 @@ CONSTITUTION: PROPRIETORSHIP.
 
 PARTNERSHIP = r"""
 CONSTITUTION: PARTNERSHIP FIRM.
-- Provide firm current tax @ 33.34% effective (33.3333% in computation) on income
-  after Sec 40(b) remuneration & interest, in firm_tax (CY & PY) AND a
-  st_provisions note item "Provision for income tax (firm)".
+- FIRM INCOME TAX — recognise a provision ONLY if the source supports it: if the
+  SOURCE Balance Sheet actually shows an income-tax provision (or self-assessment tax was
+  historically routed through partners' capital — see restatement below), reflect it in
+  firm_tax (CY & PY) and a st_provisions note "Provision for income tax (firm)". If the
+  source carries NO income-tax provision and the Net Profit is fully distributed to the
+  partners, set firm_tax to 0 and do NOT invent a provision — inventing one breaks the
+  Balance-Sheet tally.
 - Build partners[] with PSR; reproduce EACH partner's capital account verbatim in
   partner.lines (kinds: opening / introduced / profit (= share of profit) / interest
-  / remuneration / add / withdrawals / less). A Withdrawals line is mandatory.
-- Interest on capital and remuneration are APPROPRIATIONS - never operating
-  expenses; do NOT put them in employee_benefits or finance_costs.
+  / remuneration / add / withdrawals / less). Include a Withdrawals line when the source
+  shows one.
+- INTEREST ON CAPITAL / REMUNERATION — follow the source, do NOT relocate:
+  * If the source CHARGED interest on partners' capital and/or remuneration as EXPENSES
+    inside the Trading/P&L account (so the printed Net Profit is already net of them),
+    KEEP them in the P&L expense heads (interest on capital -> finance_costs; remuneration
+    -> employee_benefits or other_expenses) so Net Profit ties to source, AND ALSO credit
+    them as "interest"/"remuneration" lines in the partners' capital accounts exactly as
+    the source shows. Such items are BOTH a P&L charge and a capital credit — keep both.
+  * Treat interest/remuneration as below-the-line appropriations (excluded from the P&L)
+    ONLY when the source presents a SEPARATE Profit & Loss Appropriation statement.
+  * The per-partner "profit" (Share of Profit) lines must sum to the Net Profit available
+    for distribution shown in the source.
 - If self-assessment tax was historically debited to partners' capital in the year
   of payment, restate: PY bears a provision equal to the tax paid in CY; CY bears a
   new provision @ 33.3333%; route prior-year tax actually paid through Withdrawals

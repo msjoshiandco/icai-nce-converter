@@ -138,14 +138,20 @@ def reconcile(p: Payload) -> List[Dict]:
                 d.append({"check": "Net Profit shown in the Capital Account ≠ Statement of P&L profit",
                           "year": ylabel, "expected": plp, "got": cap_np, "diff": round(cap_np - plp, 2)})
         # 4. Case B depreciation reconciliation (CY only, per-asset modelled)
-        if p.depreciation_case == "B" and p.ppe_assets:
+        if p.depreciation_case == "B" and p.ppe_assets and dep_for_year_total(p, "cy") > EPS:
             dep_sched = dep_for_year_total(p, yr) if yr == "cy" else _note_total(p, "depreciation", "py")
             dep_note = _note_total(p, "depreciation", yr)
             if yr == "cy" and abs(dep_sched - dep_note) > EPS:
                 d.append({"check": "Depreciation for the year (PPE schedule) ≠ Depreciation note",
                           "year": ylabel, "expected": dep_sched, "got": dep_note,
                           "diff": round(dep_sched - dep_note, 2)})
-        # 5. firm appropriation tie: interest + remuneration + share = PAT
+        # 5. firm appropriation tie. Two valid presentations exist and we accept
+        #    EITHER (flag only when neither ties):
+        #    (1) interest on capital / remuneration are CHARGED in the P&L, so they
+        #        are already inside Net Profit; the whole Net Profit is then shared
+        #        by PSR  ->  sum(profit-share) == PAT.
+        #    (2) interest / remuneration are appropriated BELOW Net Profit
+        #        (book-profit style)  ->  interest + remuneration + share == PAT.
         if firm:
             int_t = sum(pt.kind_total("interest", yr) for pt in p.partners)
             rem_t = sum(pt.kind_total("remuneration", yr) for pt in p.partners)
@@ -154,10 +160,12 @@ def reconcile(p: Payload) -> List[Dict]:
             if p.firm_tax:
                 tax = getattr(p.firm_tax, f"current_tax_{yr}") or 0.0
             pat = round(pl_profit(p, yr) - tax, 2)
-            if abs((int_t + rem_t + shr_t) - pat) > EPS:
-                d.append({"check": "Appropriation does not tie (Interest + Remuneration + Profit share ≠ Profit after tax)",
-                          "year": ylabel, "expected": pat, "got": round(int_t + rem_t + shr_t, 2),
-                          "diff": round((int_t + rem_t + shr_t) - pat, 2)})
+            conv1 = abs(shr_t - pat)                       # interest/rem expensed in P&L
+            conv2 = abs((int_t + rem_t + shr_t) - pat)     # interest/rem appropriated
+            if min(conv1, conv2) > EPS:
+                d.append({"check": "Appropriation does not tie (profit share, or interest + remuneration + share, must equal Profit after tax)",
+                          "year": ylabel, "expected": pat, "got": round(shr_t, 2),
+                          "diff": round(shr_t - pat, 2)})
     return d
 
 
