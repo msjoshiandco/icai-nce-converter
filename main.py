@@ -126,7 +126,17 @@ if os.path.isdir(STATIC_DIR):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "llm_configured": bool(os.environ.get("ANTHROPIC_API_KEY")), "codes_configured": bool(os.environ.get("ACCESS_CODES"))}
+    store = "memory"
+    if _upstash():
+        try:
+            _redis("get/nce_health_probe")   # harmless read to confirm connectivity
+            store = "redis"
+        except Exception:
+            store = "memory (redis unreachable)"
+    return {"status": "ok",
+            "llm_configured": bool(os.environ.get("ANTHROPIC_API_KEY")),
+            "codes_configured": bool(os.environ.get("ACCESS_CODES")),
+            "usage_store": store}
 
 
 @app.get("/", response_class=HTMLResponse)
