@@ -114,7 +114,7 @@ def extract_payload(constitution: str, files: List[Tuple[str, bytes]],
 
     msg = client.messages.create(
         model=DEFAULT_MODEL,
-        max_tokens=8000,
+        max_tokens=16000,
         system=system_prompt(constitution),
         messages=[{"role": "user", "content": blocks}],
     )
@@ -134,7 +134,20 @@ def _extract_json(text: str) -> dict:
     end = text.rfind("}")
     if start == -1 or end == -1:
         raise ValueError("No JSON object found in model output")
-    return json.loads(text[start:end + 1])
+    blob = text[start:end + 1]
+    try:
+        return json.loads(blob)
+    except json.JSONDecodeError:
+        return json.loads(_repair_json(blob))
+
+
+def _repair_json(s: str) -> str:
+    """Fix the JSON slips Claude occasionally makes on large statements:
+    Indian digit-grouping commas inside numbers (14,36,921 -> 1436921) and
+    trailing commas before a } or ]. Only runs after a strict parse has failed."""
+    s = re.sub(r"(?<=\d),(?=\d)", "", s)   # grouping commas between two digits
+    s = re.sub(r",(\s*[}\]])", r"\1", s)    # trailing comma before } or ]
+    return s
 
 
 # --------------------------------------------------------------------------
@@ -149,7 +162,7 @@ def correct_payload(constitution, files, current_json: str, discrepancies_text: 
                                               current_json=current_json)
     blocks.insert(0, {"type": "text", "text": user_text})
     msg = client.messages.create(
-        model=DEFAULT_MODEL, max_tokens=8000,
+        model=DEFAULT_MODEL, max_tokens=16000,
         system=system_prompt(constitution),
         messages=[{"role": "user", "content": blocks}],
     )
