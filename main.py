@@ -38,14 +38,21 @@ def parse_codes():
             code, _, lim = part.rpartition(":")
             code = code.strip()
             try:
-                limit = int(lim.strip())
+                limit = max(0, int(lim.strip()))   # explicit per-code limit (0 = unlimited)
             except ValueError:
-                code, limit = part, 0
+                code, limit = part, None            # ':' was part of the code, not a limit
         else:
-            code, limit = part, 0
+            code, limit = part, None                # no explicit limit -> use DEFAULT
         if code:
-            out[code] = max(0, limit)
+            out[code] = limit
     return out
+
+
+def default_limit():
+    try:
+        return max(0, int(os.environ.get("DEFAULT_CONVERSION_LIMIT", "0") or 0))
+    except ValueError:
+        return 0
 
 
 def valid_codes():
@@ -104,7 +111,8 @@ def usage_incr(code):
 
 
 def code_status(code):
-    limit = parse_codes().get(code, 0)
+    explicit = parse_codes().get(code)
+    limit = explicit if explicit is not None else default_limit()
     used = usage_get(code)
     return {"limit": limit, "used": used,
             "remaining": (None if limit <= 0 else max(0, limit - used)),
