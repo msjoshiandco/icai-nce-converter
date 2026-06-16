@@ -168,7 +168,7 @@ async def api_admin_reset(target: str = Form(...), x_admin_key: str = Header(Non
 
 
 @app.post("/api/extract")
-async def api_extract(constitution: str = Form(...),
+def api_extract(constitution: str = Form(...),
                       extra: str = Form(""),
                       files: List[UploadFile] = File(...),
                       x_access_code: str = Header(None)):
@@ -185,7 +185,7 @@ async def api_extract(constitution: str = Form(...),
             raise HTTPException(415, "This looks like a legacy .doc file (old Word format). "
                                      "Please open it in Word and use File > Save As > Word Document (.docx), "
                                      "then upload the .docx. PDF and Excel are also supported.")
-        payload_files.append((f.filename, await f.read()))
+        payload_files.append((f.filename, f.file.read()))
     # enforce per-code conversion limit (extraction is the token-cost step)
     st = code_status(code)
     if not st["unlimited"] and st["used"] >= st["limit"]:
@@ -213,7 +213,7 @@ async def api_extract(constitution: str = Form(...),
 
 
 @app.post("/api/generate")
-async def api_generate(payload: dict, denomination: str = "actual", x_access_code: str = Header(None)):
+def api_generate(payload: dict, denomination: str = "actual", x_access_code: str = Header(None)):
     require_code(x_access_code)
     import reconcile as rec
     try:
