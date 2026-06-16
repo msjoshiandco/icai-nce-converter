@@ -343,7 +343,11 @@ async function verifyCode(){
   if(!val('accessCode')){tag.textContent='Enter a code first';tag.style.color='#c0392b';return;}
   tag.textContent='Checking...';tag.style.color='#6b7888';
   try{var r=await fetch('/api/verify',{method:'POST',headers:codeHeaders()});
-    if(r.ok){tag.textContent='✓ Valid code';tag.style.color='#1a7f48';}
+    if(r.ok){var j=await r.json();
+      if(j.unlimited){tag.textContent='✓ Valid code (unlimited)';tag.style.color='#1a7f48';}
+      else{var rem=j.remaining;
+        tag.textContent='✓ Valid — '+j.used+' of '+j.limit+' used'+(rem===0?' · limit reached':' · '+rem+' left');
+        tag.style.color=(rem===0?'#c0392b':'#1a7f48');}}
     else{tag.textContent='✗ Invalid / inactive';tag.style.color='#c0392b';}}
   catch(e){tag.textContent='Could not verify';tag.style.color='#c0392b';}}
 async function buildAndDownload(payload){
