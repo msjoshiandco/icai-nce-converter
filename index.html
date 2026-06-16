@@ -392,7 +392,14 @@ async function convert(){
     }
     showRecon(recon,true);
     await buildAndDownload(data);
-    setStatus('Done. Statements reconciled to source; workbook downloaded.','ok');
+    var u=resp.usage, msg='Done. Statements reconciled to source; workbook downloaded.';
+    if(u && !u.unlimited){
+      msg+=' \u2014 '+u.remaining+' of '+u.limit+' conversion(s) left on this code.';
+      var tg=document.getElementById('verifyTag');
+      if(tg){tg.textContent='\u2713 '+u.used+' of '+u.limit+' used'+(u.remaining===0?' \u00b7 limit reached':' \u00b7 '+u.remaining+' left');
+        tg.style.color=(u.remaining===0?'#c0392b':'#1a7f48');}
+    }
+    setStatus(msg,'ok');
   }catch(e){setStatus('Conversion failed: '+cleanErr(e.message),'err');}
   document.getElementById('convertBtn').disabled=false;}
 async function generateFromJson(){

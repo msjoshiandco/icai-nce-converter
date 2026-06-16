@@ -192,6 +192,7 @@ async def api_extract(constitution: str = Form(...),
         raise HTTPException(500, f"Extraction failed: {e}")
     return JSONResponse({
         "payload": asdict(payload),
+        "usage": code_status(code),
         "reconciliation": {
             "passed": len(discrepancies) == 0,
             "discrepancies": discrepancies,
