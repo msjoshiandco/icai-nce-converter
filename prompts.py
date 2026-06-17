@@ -228,6 +228,47 @@ CRITICAL COMPUTATION RULES (these make the Balance Sheet tally — get them righ
   if individual sub-line classification is imperfect.
   A downstream engine uses these to verify the conversion reconciles to source EXACTLY;
   if your line items do not reconcile to these control totals the conversion is REJECTED.
+
+ANNEXURES / SCHEDULES ARE PART OF THE STATEMENTS (read holistically):
+- A group is often printed on the FACE of the Balance Sheet or P&L as a single TOTAL
+  (e.g. "Indirect Expenses 2,99,11,542", "Duties & Taxes 5,53,449", "Sundry Debtors
+  4,22,22,217"), with its LEDGER-WISE bifurcation given later as an annexure / schedule /
+  "list". Treat every such annexure as an integral part of the statements.
+- For each grouped figure: (i) read the FACE TOTAL — it is the reliable control for that
+  group; (ii) read the ledger-wise bifurcation from its annexure; (iii) classify each
+  ledger per the MAPPING RULEBOOK below; (iv) the bifurcated ledgers MUST sum back to the
+  face total. If they do not, you have mis-read a ledger (often a decimal slip) — re-read
+  and correct it. Never ignore an annexure and never double-count (face total AND its
+  bifurcation are the SAME money shown at two levels).
+
+MAPPING RULEBOOK (authoritative — classify by these rules, do NOT improvise). GROUP rule
+is the default; a matching LEDGER rule overrides the group for that ledger only:
+- GROUPS -> NCE head:
+  Capital / Partners' Capital -> capital (built from capital-account lines);
+  Reserves & Surplus -> reserves; Secured Loans + Unsecured Loans (Loan Funds) ->
+  lt_borrowings; Bank OD / CC / Cash Credit -> st_borrowings; Sundry Creditors ->
+  trade_payables; Provisions -> st_provisions; Salary/Wages Payable, Outstanding
+  Expenses, other current liabilities -> other_cl; Fixed Assets -> ppe; Investments ->
+  nc_investments; Closing Stock -> inventories; Sundry Debtors -> trade_receivables;
+  Cash-in-hand + Bank accounts (excluding OD/CC) -> cash_bank; Loans & Advances (Asset),
+  Deposits -> st_loans_adv; Other Current Assets, Misc Expenditure / Accumulated Loss ->
+  other_ca; Sales + Direct Incomes -> revenue; Indirect Incomes -> other_income;
+  Purchases (with Opening/Closing stock) -> cost_materials; Direct Expenses ->
+  other_expenses; Indirect Expenses -> split ledger-wise (next).
+- LEDGER overrides:
+  salary/wages/bonus/staff welfare/PF/ESIC/gratuity/labour -> employee_benefits;
+  depreciation/amortization -> depreciation; interest/bank charges/finance cost/loan
+  processing/interest on partner's capital -> finance_costs, BUT interest on LATE PAYMENT
+  of TDS/GST/Income-tax -> other_expenses; any other indirect expense -> other_expenses;
+  Bank OD/CC/Cash Credit ledgers -> st_borrowings; TDS/TCS receivable, Advance tax, GST
+  input/ITC, income-tax refund -> st_loans_adv.
+- DUTIES & TAXES group: net all GST-related ledgers (CGST/SGST/IGST incl. reconciliation
+  and unavailed, EXCLUDING TDS Payable). If the net is a DEBIT, show it under
+  st_loans_adv as a single line "GST Receivable"; if CREDIT, under other_cl. TDS Payable
+  is ALWAYS other_cl.
+- SIGN clean-ups: a DEBIT balance in Sundry Creditors -> other_ca (gross up; never a
+  negative payable); a CREDIT balance in Sundry Debtors -> other_cl (never a negative
+  receivable).
 """
 
 
