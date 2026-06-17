@@ -193,56 +193,75 @@ def _rebuild_from_controls(p: Payload) -> List[str]:
     fixes = []
 
     for yr in ("cy", "py"):
-        rev = getattr(c, f"revenue_{yr}") or 0.0
-        oin = getattr(c, f"other_income_{yr}") or 0.0
+        # revenue / other income: prefer the printed control, else the model's note total
+        rev = getattr(c, f"revenue_{yr}") or _note_total(p, "revenue", yr)
+        oin = getattr(c, f"other_income_{yr}") or _note_total(p, "other_income", yr)
         dir_e = getattr(c, f"direct_exp_{yr}") or 0.0
         ind_e = getattr(c, f"indirect_exp_{yr}") or 0.0
-        dep = getattr(c, f"depreciation_{yr}") or 0.0
+        dep = getattr(c, f"depreciation_{yr}") or _note_total(p, "depreciation", yr)
         op = getattr(c, f"opening_stock_{yr}") or 0.0
         cl = getattr(c, f"closing_stock_{yr}") or 0.0
         pu = getattr(c, f"purchases_{yr}") or 0.0
-        # need the core printed sub-totals to do a rebuild for this year
-        if rev <= 0 or (dir_e <= 0 and ind_e <= 0):
-            continue
+        cost = round(op + pu - cl, 2) if (op or pu or cl) else _note_total(p, "cost_materials", yr)
 
-        cost = round(op + pu - cl, 2)
+        # Net Profit: prefer the printed control; else derive it from the capital-account
+        # 'profit' lines (these tie to the source capital, which is independently checked).
+        np_ = getattr(c, f"net_profit_{yr}") or 0.0
+        if np_ <= 0:
+            if p.entity.constitution == "partnership":
+                np_ = round(sum(pt.kind_total("profit", yr) for pt in p.partners), 2)
+            elif p.owner_capital:
+                np_ = round(sum((getattr(l, yr) or 0.0) for l in p.owner_capital.resolved_lines()
+                                if l.kind == "profit"), 2)
+
+        # Decide TOTAL expenses:
+        #  - if Net Profit + Revenue are known, anchor expenses so the P&L profit equals
+        #    Net Profit EXACTLY (independent of how the model summed the sub-lines);
+        #  - else fall back to the printed Direct + Indirect expense sub-totals.
+        if np_ > 0 and rev > 0:
+            total_exp = round(rev + oin - np_, 2)
+        elif dir_e > 0 or ind_e > 0:
+            total_exp = round(cost + dir_e + ind_e, 2)
+        else:
+            continue   # not enough reliable anchors for this year - leave as-is
 
         def _put(key, label, val):
             n = p.note(key)
+            # preserve the OTHER year's figure label-agnostically (sum of existing items),
+            # so renaming the note to the canonical label never wipes the other year.
+            exist_cy = round(sum((i.cy or 0.0) for i in n.items), 2) if (n and n.items) else 0.0
+            exist_py = round(sum((i.py or 0.0) for i in n.items), 2) if (n and n.items) else 0.0
             if n is None:
                 n = Note(key=key, title=label); p.notes.append(n)
             if not n.title:
                 n.title = label
-            # overwrite only THIS year's single anchor item, preserve the other year
-            items = {i.label: i for i in n.items}
-            keep = items.get(label)
-            cyv = val if yr == "cy" else (keep.cy if keep else 0.0)
-            pyv = val if yr == "py" else (keep.py if keep else 0.0)
+            cyv = val if yr == "cy" else exist_cy
+            pyv = val if yr == "py" else exist_py
             n.items = [LineItem(label=label, cy=round(cyv, 2), py=round(pyv, 2))]
 
-        _put("revenue", "Revenue from operations", rev)
-        _put("other_income", "Other income", oin)
+        _put("revenue", "Revenue from operations", round(rev, 2))
+        _put("other_income", "Other income", round(oin, 2))
         _put("cost_materials", "Cost of materials consumed", cost)
         ci = p.note("changes_inventory")
         if ci:
             ci.items = []
         if dep > 0:
-            _put("depreciation", "Depreciation", dep)
+            _put("depreciation", "Depreciation", round(dep, 2))
 
-        # keep employee-benefit / finance-cost classification ONLY if sane, else 0
+        # keep employee-benefit / finance-cost classification ONLY if sane, else drop
         emp = _note_total(p, "employee_benefits", yr)
         fin = _note_total(p, "finance_costs", yr)
-        if emp < 0 or fin < 0 or (emp + fin + dep) > (dir_e + ind_e) + EPS:
+        if emp < 0 or fin < 0 or (cost + dep + emp + fin) > total_exp + EPS:
             emp = fin = 0.0
             for k in ("employee_benefits", "finance_costs"):
                 n = p.note(k)
                 if n:
                     n.items = []
-        # other_expenses is the residual that anchors the printed direct+indirect total
-        other = round((dir_e + ind_e) - dep - emp - fin, 2)
+        # other_expenses is the residual that makes total expenses (hence profit) tie
+        other = round(total_exp - cost - dep - emp - fin, 2)
         _put("other_expenses", "Other expenses", other)
-        fixes.append(f"{yr.upper()}: P&L rebuilt from printed sub-totals "
-                     f"(revenue {rev:,.0f}, expenses {dir_e+ind_e+cost:,.0f}, net profit ties)")
+        fixes.append(f"{yr.upper()}: P&L anchored to Net Profit {np_:,.0f} "
+                     f"(revenue {rev:,.0f}); profit ties to source")
 
     # --- fixed-asset block movement from the two Balance-Sheet FA totals ---
     fa_cy = getattr(c, "fixed_assets_cy") or 0.0
