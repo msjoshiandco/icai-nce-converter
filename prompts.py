@@ -261,10 +261,19 @@ is the default; a matching LEDGER rule overrides the group for that ledger only:
   of TDS/GST/Income-tax -> other_expenses; any other indirect expense -> other_expenses;
   Bank OD/CC/Cash Credit ledgers -> st_borrowings; TDS/TCS receivable, Advance tax, GST
   input/ITC, income-tax refund -> st_loans_adv.
-- DUTIES & TAXES group: net all GST-related ledgers (CGST/SGST/IGST incl. reconciliation
-  and unavailed, EXCLUDING TDS Payable). If the net is a DEBIT, show it under
-  st_loans_adv as a single line "GST Receivable"; if CREDIT, under other_cl. TDS Payable
-  is ALWAYS other_cl.
+- DUTIES & TAXES group: net all GST-related ledgers (CGST/SGST/IGST incl. reconciliation,
+  unavailed, AND RCM Payable, EXCLUDING TDS Payable). If the net is a DEBIT, show it under
+  st_loans_adv as a single line "GST Receivable"; if CREDIT, under other_cl. The single
+  netted figure ALREADY CONTAINS every GST ledger (including RCM Payable) - do NOT also
+  list any of those same ledgers (e.g. RCM Payable) as a separate line; that double-counts.
+  TDS Payable and TCS are shown as their own separate other_cl lines.
+- COMPLETENESS (do NOT drop a comparative figure): include EVERY line that has a balance
+  in EITHER year. NEVER omit a line just because it is nil in the current year - its
+  previous-year (PY) figure must still appear (e.g. a loan fully repaid during CY still
+  shows its PY balance). Every party/ledger present in either year's source must be carried.
+- NEGATIVE / DEBIT balances: capture them EXACTLY as shown (e.g. a TDS Payable of -6,036,
+  a creditor or tax ledger in debit). NEVER replace a negative balance with 0 or drop it -
+  doing so throws the Balance Sheet out by that amount.
 - SUNDRY DEBTORS / SUNDRY CREDITORS - take the PRINTED GROUP TOTAL exactly as in the
   source: Sundry Debtors total -> trade_receivables; Sundry Creditors total ->
   trade_payables. Do NOT split or re-classify any debit/credit (negative) balance inside
