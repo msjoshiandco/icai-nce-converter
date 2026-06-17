@@ -172,8 +172,11 @@ def correct_payload(constitution, files, current_json: str, discrepancies_text: 
     return Payload.parse(data)
 
 
-def reconcile_and_correct(constitution, files, payload, max_retries: int = 2):
-    """Run the reconciliation engine; auto-fix; retry via Claude up to max_retries.
+def reconcile_and_correct(constitution, files, payload, max_retries: int = 0):
+    """Run the reconciliation engine and the DETERMINISTIC auto-fix once. By default we do
+    NOT re-prompt Claude (max_retries=0): the engine anchors the P&L to Net Profit, cleans
+    the capital accounts and rebuilds the fixed-asset movement, so a single extraction call
+    is enough. This keeps a conversion to ONE API call (~fast, low-cost) instead of three.
     Returns (payload, discrepancies, fixes_applied)."""
     import json as _json
     from dataclasses import asdict
