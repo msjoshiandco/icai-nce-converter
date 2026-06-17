@@ -263,9 +263,38 @@ def _rebuild_from_controls(p: Payload) -> List[str]:
     return fixes
 
 
+def _clean_capital_lines(p: Payload) -> List[str]:
+    """A T-format capital account lists balancing rows ("To Closing Balance", "Total",
+    "Balance c/d") that are RESULTS, not movements. If extraction captured those as
+    capital lines (or merged both years' accounts) the signed closing balance balloons.
+    The builder computes the closing itself, so strip any balancing/total row here."""
+    drop = {"closing balance", "closing bal", "closing capital", "balance cd",
+            "balance carried down", "balance carried forward", "total", "grand total",
+            "total rs", "balance"}
+    def _norm(lbl: str) -> str:
+        t = (lbl or "").strip().lower()
+        for pre in ("to ", "by "):
+            if t.startswith(pre):
+                t = t[len(pre):]
+        t = t.replace(".", "").replace("/", "").replace(":", "")
+        return " ".join(t.split())
+    holders = ([p.owner_capital] if p.owner_capital else []) + list(p.partners or [])
+    removed = 0
+    for h in holders:
+        lines = getattr(h, "lines", None)
+        if not lines:
+            continue
+        kept = [l for l in lines if _norm(l.label) not in drop]
+        removed += len(lines) - len(kept)
+        h.lines = kept
+    return [f"Removed {removed} balancing/total row(s) wrongly captured in the capital "
+            f"account(s); closing balance is computed by the engine"] if removed else []
+
+
 def auto_fix(p: Payload) -> List[str]:
     """Apply safe, rule-based corrections. Returns a list of fixes applied."""
     fixes = []
+    fixes += _clean_capital_lines(p)
     fixes += _rebuild_from_controls(p)
     c = p.controls
     # (a) Inventory netting: if opening/closing/purchases known, force the

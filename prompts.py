@@ -85,6 +85,13 @@ Rules for the JSON:
     wording as "label". Do NOT compress the account into a fixed set of headings;
     it may have many lines (e.g. Opening, Net Profit, Bank Interest, Interest on FD,
     Agricultural Income, Withdrawals, LIC Premium, Income Tax, Drawings, ...).
+  * EXCLUDE the balancing rows: do NOT capture the "To Closing Balance" / "Balance c/d" /
+    "Closing Balance" row, nor the "Total" row, as capital lines. Those are RESULTS that
+    the engine computes from the movement lines — including them double-counts and wildly
+    inflates the closing balance. Capture ONLY the genuine movement lines (opening + the
+    credits and debits during the year).
+  * Use exactly ONE set of capital accounts — the CURRENT-year accounts with a cy and py
+    column. Do NOT stack the previous-year T-account as extra lines.
   * "kind" decides the maths and the Add/Less prefix:
       opening      = the opening balance (added, no prefix)
       profit       = the business net profit transferred from the P&L (added) —
