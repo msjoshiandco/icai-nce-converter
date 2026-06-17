@@ -133,7 +133,6 @@ UNIVERSAL RULES
 - Capital method is FLUCTUATING (never fixed-capital).
 - Classification (auto-apply unless data contradicts):
   gold/jewellery under fixed assets → nc_investments (footnote the reclassification);
-  debit balances in creditors → st_loans_adv (gross up; never negative trade_payables);
   bank OD/cash credit → st_borrowings (never negative cash);
   GST input/TDS/advance tax → st_loans_adv (statutory balances);
   sales → revenue; bank/FD interest, dividend, capital gain → other_income;
@@ -266,9 +265,12 @@ is the default; a matching LEDGER rule overrides the group for that ledger only:
   and unavailed, EXCLUDING TDS Payable). If the net is a DEBIT, show it under
   st_loans_adv as a single line "GST Receivable"; if CREDIT, under other_cl. TDS Payable
   is ALWAYS other_cl.
-- SIGN clean-ups: a DEBIT balance in Sundry Creditors -> other_ca (gross up; never a
-  negative payable); a CREDIT balance in Sundry Debtors -> other_cl (never a negative
-  receivable).
+- SUNDRY DEBTORS / SUNDRY CREDITORS - take the PRINTED GROUP TOTAL exactly as in the
+  source: Sundry Debtors total -> trade_receivables; Sundry Creditors total ->
+  trade_payables. Do NOT split or re-classify any debit/credit (negative) balance inside
+  them - any such regrouping is handled at T-format level, NOT here, so that the NCE
+  Trade Receivables / Trade Payables tie exactly to the source totals. You only need the
+  group total, NOT the party-wise list.
 """
 
 
