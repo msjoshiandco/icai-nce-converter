@@ -50,13 +50,20 @@ Return ONE JSON object, no prose, with this shape:
   ],
   "depreciation_case": "A"|"B",
   "firm_tax": {"current_tax_cy": n, "current_tax_py": n, "restatement_note": str}  // partnership ONLY,
-  "controls": {                 // MANDATORY - read directly from the printed source
+  "controls": {                 // MANDATORY - read these PRINTED BOLD totals directly
      "bs_total_cy": n, "bs_total_py": n,
      "capital_close_cy": n, "capital_close_py": n,
      "net_profit_cy": n, "net_profit_py": n,
      "opening_stock_cy": n, "opening_stock_py": n,
      "closing_stock_cy": n, "closing_stock_py": n,
-     "purchases_cy": n, "purchases_py": n
+     "purchases_cy": n, "purchases_py": n,
+     // P&L printed sub-totals (the bold figures, NOT the sum of inner sub-lines):
+     "revenue_cy": n, "revenue_py": n,              // Sales / Revenue total
+     "other_income_cy": n, "other_income_py": n,    // Indirect Incomes total
+     "direct_exp_cy": n, "direct_exp_py": n,        // Direct Expenses total (Trading a/c)
+     "indirect_exp_cy": n, "indirect_exp_py": n,    // Indirect Expenses total (P&L a/c)
+     "depreciation_cy": n, "depreciation_py": n,    // Depreciation charged in the P&L (0 if none)
+     "fixed_assets_cy": n, "fixed_assets_py": n     // Net fixed-asset (WDV) TOTAL on each year's BS
   }
 }
 
@@ -200,6 +207,18 @@ CRITICAL COMPUTATION RULES (these make the Balance Sheet tally — get them righ
     on the source Balance Sheet (for a firm, the TOTAL of all partners' closing balances).
   * net_profit_cy / net_profit_py = Net Profit as printed in the source Profit & Loss.
   * opening_stock, closing_stock, purchases (per year) = from the Trading Account.
+  * revenue = the printed Sales / Revenue from operations TOTAL; other_income = the
+    printed Indirect Incomes TOTAL; direct_exp = the printed Direct Expenses TOTAL;
+    indirect_exp = the printed Indirect Expenses TOTAL; depreciation = the depreciation
+    charged in the P&L (0 if none).
+  * fixed_assets_cy / fixed_assets_py = the NET fixed-asset (WDV) TOTAL shown on each
+    year's Balance Sheet (used to reconcile the depreciation/additions movement; a
+    separate asset-wise depreciation chart is NOT required, though if one is supplied
+    you may use Case "B" instead).
+  READ THESE AS THE PRINTED BOLD SUB-TOTALS — do NOT re-sum the dozens of inner GST /
+  ledger sub-lines. The engine BUILDS the Profit & Loss and the fixed-asset block from
+  these control totals, so getting them right guarantees the statement reconciles even
+  if individual sub-line classification is imperfect.
   A downstream engine uses these to verify the conversion reconciles to source EXACTLY;
   if your line items do not reconcile to these control totals the conversion is REJECTED.
 """

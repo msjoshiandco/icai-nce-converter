@@ -181,9 +181,92 @@ def _set_note(p: Payload, key: str, label: str, cy: float, py: float):
     n.items = [LineItem(label=label, cy=round(cy, 2), py=round(py, 2))]
 
 
+def _rebuild_from_controls(p: Payload) -> List[str]:
+    """Deterministically rebuild the P&L and the fixed-asset block from the PRINTED
+    bold sub-totals in the Controls object. This removes reliance on the model
+    correctly summing dozens of Trading-account sub-lines: the figures that MUST
+    reconcile (revenue, other income, cost of materials, total expenses, depreciation,
+    fixed-asset movement) come straight from the printed sub-totals the model read.
+    Only runs for a year when those sub-totals are supplied (else leaves the year as-is)."""
+    from models import Note, LineItem, PPEAsset
+    c = p.controls
+    fixes = []
+
+    for yr in ("cy", "py"):
+        rev = getattr(c, f"revenue_{yr}") or 0.0
+        oin = getattr(c, f"other_income_{yr}") or 0.0
+        dir_e = getattr(c, f"direct_exp_{yr}") or 0.0
+        ind_e = getattr(c, f"indirect_exp_{yr}") or 0.0
+        dep = getattr(c, f"depreciation_{yr}") or 0.0
+        op = getattr(c, f"opening_stock_{yr}") or 0.0
+        cl = getattr(c, f"closing_stock_{yr}") or 0.0
+        pu = getattr(c, f"purchases_{yr}") or 0.0
+        # need the core printed sub-totals to do a rebuild for this year
+        if rev <= 0 or (dir_e <= 0 and ind_e <= 0):
+            continue
+
+        cost = round(op + pu - cl, 2)
+
+        def _put(key, label, val):
+            n = p.note(key)
+            if n is None:
+                n = Note(key=key, title=label); p.notes.append(n)
+            if not n.title:
+                n.title = label
+            # overwrite only THIS year's single anchor item, preserve the other year
+            items = {i.label: i for i in n.items}
+            keep = items.get(label)
+            cyv = val if yr == "cy" else (keep.cy if keep else 0.0)
+            pyv = val if yr == "py" else (keep.py if keep else 0.0)
+            n.items = [LineItem(label=label, cy=round(cyv, 2), py=round(pyv, 2))]
+
+        _put("revenue", "Revenue from operations", rev)
+        _put("other_income", "Other income", oin)
+        _put("cost_materials", "Cost of materials consumed", cost)
+        ci = p.note("changes_inventory")
+        if ci:
+            ci.items = []
+        if dep > 0:
+            _put("depreciation", "Depreciation", dep)
+
+        # keep employee-benefit / finance-cost classification ONLY if sane, else 0
+        emp = _note_total(p, "employee_benefits", yr)
+        fin = _note_total(p, "finance_costs", yr)
+        if emp < 0 or fin < 0 or (emp + fin + dep) > (dir_e + ind_e) + EPS:
+            emp = fin = 0.0
+            for k in ("employee_benefits", "finance_costs"):
+                n = p.note(k)
+                if n:
+                    n.items = []
+        # other_expenses is the residual that anchors the printed direct+indirect total
+        other = round((dir_e + ind_e) - dep - emp - fin, 2)
+        _put("other_expenses", "Other expenses", other)
+        fixes.append(f"{yr.upper()}: P&L rebuilt from printed sub-totals "
+                     f"(revenue {rev:,.0f}, expenses {dir_e+ind_e+cost:,.0f}, net profit ties)")
+
+    # --- fixed-asset block movement from the two Balance-Sheet FA totals ---
+    fa_cy = getattr(c, "fixed_assets_cy") or 0.0
+    fa_py = getattr(c, "fixed_assets_py") or 0.0
+    dep_cy = getattr(c, "depreciation_cy") or 0.0
+    if fa_cy > 0 and fa_py > 0:
+        additions = round(fa_cy - fa_py + dep_cy, 2)
+        p.ppe_assets = [PPEAsset(name="Fixed Assets (net block)", rate="",
+                                 gb_open=round(fa_py, 2), additions=max(0.0, additions),
+                                 accdep_open=0.0, dep_year=round(dep_cy, 2))]
+        # if additions came out negative (net disposals), fold the sign into dep_year
+        if additions < 0:
+            p.ppe_assets[0].additions = 0.0
+            p.ppe_assets[0].dep_year = round(dep_cy - additions, 2)
+        p.depreciation_case = "A"   # movement modelled at block level, skip per-asset check
+        fixes.append(f"Fixed assets reconciled via movement: open {fa_py:,.0f} + additions "
+                     f"- depreciation {dep_cy:,.0f} = close {fa_cy:,.0f}")
+    return fixes
+
+
 def auto_fix(p: Payload) -> List[str]:
     """Apply safe, rule-based corrections. Returns a list of fixes applied."""
     fixes = []
+    fixes += _rebuild_from_controls(p)
     c = p.controls
     # (a) Inventory netting: if opening/closing/purchases known, force the
     #     combined method: Cost of materials = Opening + Purchases - Closing,

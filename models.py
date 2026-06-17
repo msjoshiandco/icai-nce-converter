@@ -266,6 +266,23 @@ class Controls:
     closing_stock_py: float = 0.0
     purchases_cy: float = 0.0
     purchases_py: float = 0.0
+    # Printed P&L bold sub-totals (read directly; let the engine build the P&L from
+    # these instead of trusting the model to sum dozens of GST sub-lines).
+    revenue_cy: float = 0.0
+    revenue_py: float = 0.0
+    other_income_cy: float = 0.0
+    other_income_py: float = 0.0
+    direct_exp_cy: float = 0.0
+    direct_exp_py: float = 0.0
+    indirect_exp_cy: float = 0.0
+    indirect_exp_py: float = 0.0
+    depreciation_cy: float = 0.0
+    depreciation_py: float = 0.0
+    # Net fixed-asset (WDV) block total shown on each year's Balance Sheet. Lets the
+    # engine reconcile the inter-year movement (open + additions - depreciation = close)
+    # without needing a separate asset-wise depreciation chart.
+    fixed_assets_cy: float = 0.0
+    fixed_assets_py: float = 0.0
 
 
 @dataclass
