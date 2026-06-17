@@ -366,7 +366,8 @@ function showRecon(recon,passed){
   if(passed){el.className='recon pass show';el.innerHTML='<h4>\u2713 Reconciled to source</h4>Total Assets = Total Liabilities = source Balance Sheet; capital and profit tie to the source. No differences.';return;}
   var items=(recon.discrepancies||[]).map(function(x){return '<li>'+x.check+' ['+x.year+']: expected '+Number(x.expected).toLocaleString('en-IN',{minimumFractionDigits:2})+', got '+Number(x.got).toLocaleString('en-IN',{minimumFractionDigits:2})+', difference '+Number(x.diff).toLocaleString('en-IN',{minimumFractionDigits:2})+'</li>';}).join('');
   el.className='recon show';
-  el.innerHTML='<h4>\u26A0 Reconciliation failed \u2014 no workbook produced</h4>The converted figures do not tie to the source. Differences:<ul>'+items+'</ul><div style="margin-top:8px">Please re-check the source files (or use the Advanced panel to correct), then convert again. Nothing is delivered until it reconciles exactly.</div>';
+  var n=(recon.discrepancies||[]).length;
+  el.innerHTML='<h4>\u26A0 Draft produced \u2014 '+n+' item(s) to review</h4>The draft workbook has downloaded. These figures do not yet tie exactly to the source \u2014 they are also flagged in the red \u201CReview\u201D tab inside the Excel. Verify/correct them (you can edit values in the Advanced panel and click Generate again):<ul>'+items+'</ul>';
 }
 async function convert(){
   showRecon(null,false); if(!val('accessCode')){setStatus('Please enter your access code above before converting.','err');return;}
@@ -385,21 +386,20 @@ async function convert(){
     var data=resp.payload||resp; var recon=resp.reconciliation;
     applyClient(data);
     document.getElementById('json').value=JSON.stringify(data,null,2);
-    if(recon && recon.passed===false){
-      showRecon(recon,false);
-      setStatus('Reconciliation FAILED — no workbook was produced. See the differences below.','err');
-      document.getElementById('convertBtn').disabled=false; return;
-    }
-    showRecon(recon,true);
+    var hasIssues = !!(recon && recon.passed===false);
+    showRecon(recon, !hasIssues);
     await buildAndDownload(data);
-    var u=resp.usage, msg='Done. Statements reconciled to source; workbook downloaded.';
+    var u=resp.usage;
+    var msg = hasIssues
+      ? ('Draft workbook downloaded. '+((recon.discrepancies||[]).length)+' item(s) need your review — see the differences below and the red \u201CReview\u201D tab inside the Excel.')
+      : 'Done. Statements reconciled to source; workbook downloaded.';
     if(u && !u.unlimited){
       msg+=' \u2014 '+u.remaining+' of '+u.limit+' conversion(s) left on this code.';
       var tg=document.getElementById('verifyTag');
       if(tg){tg.textContent='\u2713 '+u.used+' of '+u.limit+' used'+(u.remaining===0?' \u00b7 limit reached':' \u00b7 '+u.remaining+' left');
         tg.style.color=(u.remaining===0?'#c0392b':'#1a7f48');}
     }
-    setStatus(msg,'ok');
+    setStatus(msg, hasIssues ? '' : 'ok');
   }catch(e){setStatus('Conversion failed: '+cleanErr(e.message),'err');}
   document.getElementById('convertBtn').disabled=false;}
 async function generateFromJson(){

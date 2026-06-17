@@ -212,6 +212,43 @@ def api_extract(constitution: str = Form(...),
     })
 
 
+def _add_review_sheet(data: bytes, discrepancies) -> bytes:
+    """Prepend a red 'Review' worksheet flagging every line that does not yet tie to
+    source, so the draft workbook is usable and the CA sees exactly what to check."""
+    import io, openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    wb = openpyxl.load_workbook(io.BytesIO(data))
+    ws = wb.create_sheet("\u26A0 Review", 0)
+    ws.sheet_properties.tabColor = "C0392B"
+    F = "Calibri Light"
+    ws["A1"] = ("Items to verify - these figures do not yet tie exactly to the source. "
+                "Please check the flagged lines below and correct the figure on the relevant sheet.")
+    ws["A1"].font = Font(name=F, size=12, bold=True, color="C0392B")
+    ws["A1"].alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells("A1:E1"); ws.row_dimensions[1].height = 34
+    hdr = ["Check", "Year", "Expected (source)", "Got (converted)", "Difference"]
+    ws.append([]); ws.append(hdr)
+    fill = PatternFill("solid", fgColor="F2DEDE")
+    thin = Side(style="thin", color="D9D9D9"); bord = Border(left=thin,right=thin,top=thin,bottom=thin)
+    for c in range(1, 6):
+        cell = ws.cell(row=3, column=c)
+        cell.font = Font(name=F, size=11, bold=True); cell.fill = fill; cell.border = bord
+    r = 4
+    for x in discrepancies:
+        ws.cell(row=r, column=1, value=x.get("check", ""))
+        ws.cell(row=r, column=2, value=x.get("year", ""))
+        ws.cell(row=r, column=3, value=round(float(x.get("expected", 0) or 0), 2))
+        ws.cell(row=r, column=4, value=round(float(x.get("got", 0) or 0), 2))
+        ws.cell(row=r, column=5, value=round(float(x.get("diff", 0) or 0), 2))
+        for c in range(1, 6):
+            cell = ws.cell(row=r, column=c); cell.font = Font(name=F, size=11); cell.border = bord
+            if c >= 3: cell.number_format = '#,##0.00;(#,##0.00)'
+        r += 1
+    for col, w in zip("ABCDE", [52, 16, 20, 20, 18]):
+        ws.column_dimensions[col].width = w
+    out = io.BytesIO(); wb.save(out); return out.getvalue()
+
+
 @app.post("/api/generate")
 def api_generate(payload: dict, denomination: str = "actual", x_access_code: str = Header(None)):
     require_code(x_access_code)
@@ -221,18 +258,15 @@ def api_generate(payload: dict, denomination: str = "actual", x_access_code: str
     except Exception as e:
         raise HTTPException(400, f"Invalid payload: {e}")
     discrepancies = rec.reconcile(p)
-    if discrepancies:
-        # ZERO TOLERANCE: never ship a non-reconciling workbook
-        raise HTTPException(status_code=422, detail={
-            "error": "RECONCILIATION_FAILED",
-            "message": "The figures do not reconcile to the source. No workbook produced.",
-            "discrepancies": discrepancies,
-            "report": rec.report_text(discrepancies),
-        })
     try:
         data = build_workbook(p, denomination)
     except Exception as e:
         raise HTTPException(400, f"Build failed: {e}")
+    # DRAFT-NOW: always produce the workbook. If anything does not tie, prepend a
+    # red "Review" tab listing the exact lines to verify, so the reviewing CA can
+    # correct the one figure in seconds instead of being blocked entirely.
+    if discrepancies:
+        data = _add_review_sheet(data, discrepancies)
     name = (p.entity.name or "Entity").replace(" ", "_")
     fy = p.entity.cy_fy or "FY"
     fname = f"{name}_FS_FY{fy}_ICAI_NCE.xlsx"
