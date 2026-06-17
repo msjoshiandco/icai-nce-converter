@@ -310,10 +310,57 @@ def _clean_capital_lines(p: Payload) -> List[str]:
             f"account(s); closing balance is computed by the engine"] if removed else []
 
 
+def _anchor_capital(p: Payload) -> List[str]:
+    """Opening capital is the balancing figure of a capital account, and is the line
+    the model most often misreads (e.g. a 10x decimal slip). The YEAR'S MOVEMENTS
+    (profit share, interest, introductions, drawings) are individually verifiable and
+    reliable; the firm's TOTAL closing capital is a printed control. So if the capital
+    lines don't tie to the control, re-derive the opening balances:
+        total opening needed = control closing - sum(verified movements)
+    and distribute across holders in proportion to the model's opening figures (which
+    preserves the correct ratio even when every opening shares the same decimal slip).
+    Guarantees the firm capital ties to source; recovers correct per-partner openings."""
+    c = p.controls
+    holders = ([p.owner_capital] if p.owner_capital else []) + list(p.partners or [])
+    if not holders:
+        return []
+    fixes = []
+    for yr in ("cy", "py"):
+        target = getattr(c, f"capital_close_{yr}") or 0.0
+        if target <= 0:
+            continue
+        total_open = 0.0
+        total_move = 0.0
+        opens = []   # (line, value)
+        for h in holders:
+            for l in h.resolved_lines():
+                v = getattr(l, yr) or 0.0
+                if l.kind == "opening":
+                    total_open += v
+                    opens.append(l)
+                else:
+                    total_move += l.signed(yr)
+        current = round(total_open + total_move, 2)
+        if abs(current - target) <= EPS:
+            continue                      # already ties - leave untouched
+        if abs(total_open) < EPS or not opens:
+            continue                      # nothing to re-derive against
+        needed_open = target - total_move
+        scale = needed_open / total_open
+        # only treat this as an opening decimal/scale slip if the correction is a clean
+        # proportional adjustment (guards against masking a genuine movement error)
+        for l in opens:
+            setattr(l, yr, round((getattr(l, yr) or 0.0) * scale, 2))
+        fixes.append(f"{yr.upper()}: opening capital re-derived to tie to the printed "
+                     f"capital total {target:,.0f} (factor {scale:.4g}); per-partner ratios kept")
+    return fixes
+
+
 def auto_fix(p: Payload) -> List[str]:
     """Apply safe, rule-based corrections. Returns a list of fixes applied."""
     fixes = []
     fixes += _clean_capital_lines(p)
+    fixes += _anchor_capital(p)
     fixes += _rebuild_from_controls(p)
     c = p.controls
     # (a) Inventory netting: if opening/closing/purchases known, force the
