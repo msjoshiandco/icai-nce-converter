@@ -115,6 +115,7 @@ def extract_payload(constitution: str, files: List[Tuple[str, bytes]],
     msg = client.messages.create(
         model=DEFAULT_MODEL,
         max_tokens=16000,
+        temperature=0,   # deterministic-as-possible: same input -> same reading
         system=[{"type": "text", "text": system_prompt(constitution),
                  "cache_control": {"type": "ephemeral"}}],  # cache the instruction prompt (billing only)
         messages=[{"role": "user", "content": blocks}],
@@ -163,7 +164,7 @@ def correct_payload(constitution, files, current_json: str, discrepancies_text: 
                                               current_json=current_json)
     blocks.insert(0, {"type": "text", "text": user_text})
     msg = client.messages.create(
-        model=DEFAULT_MODEL, max_tokens=16000,
+        model=DEFAULT_MODEL, max_tokens=16000, temperature=0,
         system=[{"type": "text", "text": system_prompt(constitution),
                  "cache_control": {"type": "ephemeral"}}],  # cache the instruction prompt (billing only)
         messages=[{"role": "user", "content": blocks}],
