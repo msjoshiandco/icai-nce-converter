@@ -152,6 +152,8 @@ class Note:
 @dataclass
 class OwnerCapital:
     name: str = ""
+    closing_cy: float = 0.0   # printed closing balance; anchors the opening (engine)
+    closing_py: float = 0.0
     # Preferred: a verbatim list of the proprietor's capital-account lines.
     lines: List[CapitalLine] = field(default_factory=list)
     # Legacy scalar fields (used only as a fallback when `lines` is empty).
@@ -187,6 +189,8 @@ class OwnerCapital:
 class PartnerRow:
     name: str = ""
     psr: float = 0.0
+    closing_cy: float = 0.0   # printed closing balance; anchors the opening (engine)
+    closing_py: float = 0.0
     # Preferred: a verbatim list of this partner's capital-account lines.
     lines: List[CapitalLine] = field(default_factory=list)
     # Legacy scalar fields (used only as a fallback when `lines` is empty).
@@ -283,6 +287,8 @@ class Controls:
     # without needing a separate asset-wise depreciation chart.
     fixed_assets_cy: float = 0.0
     fixed_assets_py: float = 0.0
+    gross_profit_cy: float = 0.0
+    gross_profit_py: float = 0.0
 
 
 @dataclass

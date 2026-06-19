@@ -167,6 +167,15 @@ def reconcile(p: Payload) -> List[Dict]:
                 d.append({"check": "Appropriation does not tie (profit share, or interest + remuneration + share, must equal Profit after tax)",
                           "year": ylabel, "expected": pat, "got": round(shr_t, 2),
                           "diff": round(shr_t - pat, 2)})
+        # Trading-account Gross Profit checkpoint: Sales - Cost of materials -
+        # Direct expenses must equal the printed Gross Profit (if supplied).
+        gp = getattr(c, f"gross_profit_{yr}") or 0.0
+        if gp:
+            calc_gp = round(_note_total(p, "revenue", yr) - _note_total(p, "cost_materials", yr)
+                            - (getattr(c, f"direct_exp_{yr}") or 0.0), 2)
+            if abs(calc_gp - gp) > EPS:
+                d.append({"check": "Gross Profit does not tie (Sales - Cost of materials - Direct expenses != printed Gross Profit)",
+                          "year": ylabel, "expected": gp, "got": calc_gp, "diff": round(calc_gp - gp, 2)})
     return d
 
 
@@ -312,48 +321,59 @@ def _clean_capital_lines(p: Payload) -> List[str]:
 
 
 def _anchor_capital(p: Payload) -> List[str]:
-    """Opening capital is the balancing figure of a capital account, and is the line
-    the model most often misreads (e.g. a 10x decimal slip). The YEAR'S MOVEMENTS
-    (profit share, interest, introductions, drawings) are individually verifiable and
-    reliable; the firm's TOTAL closing capital is a printed control. So if the capital
-    lines don't tie to the control, re-derive the opening balances:
-        total opening needed = control closing - sum(verified movements)
-    and distribute across holders in proportion to the model's opening figures (which
-    preserves the correct ratio even when every opening shares the same decimal slip).
-    Guarantees the firm capital ties to source; recovers correct per-partner openings."""
+    """Tie each capital account to its PRINTED CLOSING BALANCE. The year's movements
+    (profit share, interest, introductions, drawings) are individually reliable; opening
+    is the balancing figure the model most often misreads (e.g. a 10x slip). So:
+      opening = printed closing - sum(movements)   [per partner, when closing is given]
+    Falls back to tying the FIRM total to the printed capital control (distributing the
+    correction across the openings that have no per-partner closing). Guarantees capital
+    ties to source and recovers correct openings even under non-uniform slips."""
     c = p.controls
     holders = ([p.owner_capital] if p.owner_capital else []) + list(p.partners or [])
     if not holders:
         return []
     fixes = []
     for yr in ("cy", "py"):
-        target = getattr(c, f"capital_close_{yr}") or 0.0
-        if target <= 0:
-            continue
-        total_open = 0.0
-        total_move = 0.0
-        opens = []   # (line, value)
+        anchored = 0
+        anchored_close = 0.0
+        free_opens = []          # opening lines of holders without a printed closing
+        free_move = 0.0
         for h in holders:
-            for l in h.resolved_lines():
-                v = getattr(l, yr) or 0.0
-                if l.kind == "opening":
-                    total_open += v
-                    opens.append(l)
-                else:
-                    total_move += l.signed(yr)
-        current = round(total_open + total_move, 2)
-        if abs(current - target) <= EPS:
-            continue                      # already ties - leave untouched
-        if abs(total_open) < EPS or not opens:
-            continue                      # nothing to re-derive against
-        needed_open = target - total_move
-        scale = needed_open / total_open
-        # only treat this as an opening decimal/scale slip if the correction is a clean
-        # proportional adjustment (guards against masking a genuine movement error)
-        for l in opens:
-            setattr(l, yr, round((getattr(l, yr) or 0.0) * scale, 2))
-        fixes.append(f"{yr.upper()}: opening capital re-derived to tie to the printed "
-                     f"capital total {target:,.0f} (factor {scale:.4g}); per-partner ratios kept")
+            closing = getattr(h, f"closing_{yr}", 0.0) or 0.0
+            opens = [l for l in h.resolved_lines() if l.kind == "opening"]
+            move = sum(l.signed(yr) for l in h.resolved_lines() if l.kind != "opening")
+            if closing > 0 and opens:
+                needed = round(closing - move, 2)        # opening that makes this account tie
+                cur = sum((getattr(l, yr) or 0.0) for l in opens)
+                if abs(cur - needed) > EPS:
+                    if abs(cur) > EPS:
+                        sc = needed / cur
+                        for l in opens:
+                            setattr(l, yr, round((getattr(l, yr) or 0.0) * sc, 2))
+                    else:
+                        setattr(opens[0], yr, needed)
+                    anchored += 1
+                anchored_close += closing
+            else:
+                free_opens += opens
+                free_move += move
+        if anchored:
+            fixes.append(f"{yr.upper()}: {anchored} capital account(s) anchored to their "
+                         f"printed closing balance")
+        # firm-total fallback: tie the overall capital to the printed control using the
+        # openings that were NOT individually anchored.
+        target = getattr(c, f"capital_close_{yr}") or 0.0
+        if target <= 0 or not free_opens:
+            continue
+        needed_free = round(target - anchored_close - free_move, 2)
+        cur_free = sum((getattr(l, yr) or 0.0) for l in free_opens)
+        if abs(cur_free) < EPS or abs(cur_free - needed_free) <= EPS:
+            continue
+        sc = needed_free / cur_free
+        for l in free_opens:
+            setattr(l, yr, round((getattr(l, yr) or 0.0) * sc, 2))
+        fixes.append(f"{yr.upper()}: capital total tied to printed capital {target:,.0f} "
+                     f"(factor {sc:.4g})")
     return fixes
 
 

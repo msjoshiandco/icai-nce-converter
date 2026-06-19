@@ -30,6 +30,7 @@ Return ONE JSON object, no prose, with this shape:
   ],
   "owner_capital": {            // proprietorship ONLY
      "name": str,
+     "closing_cy": n, "closing_py": n,    // PRINTED closing balance ("To Closing Balance")
      // Reproduce the proprietor's capital account VERBATIM, line by line, in the
      // SAME ORDER as the source. One object per line. Do NOT merge lines.
      "lines": [
@@ -39,6 +40,8 @@ Return ONE JSON object, no prose, with this shape:
   },
   "partners": [                 // partnership ONLY
      {"name": str, "psr": n,
+      "closing_cy": n, "closing_py": n,   // each partner's PRINTED closing balance ("To Closing Balance")
+
       // One object per partner. Reproduce that partner's capital account VERBATIM.
       "lines": [
          {"label": str, "kind": "opening"|"profit"|"introduced"|"interest"|"remuneration"|"add"|"withdrawals"|"less",
@@ -63,7 +66,8 @@ Return ONE JSON object, no prose, with this shape:
      "direct_exp_cy": n, "direct_exp_py": n,        // Direct Expenses total (Trading a/c)
      "indirect_exp_cy": n, "indirect_exp_py": n,    // Indirect Expenses total (P&L a/c)
      "depreciation_cy": n, "depreciation_py": n,    // Depreciation charged in the P&L (0 if none)
-     "fixed_assets_cy": n, "fixed_assets_py": n     // Net fixed-asset (WDV) TOTAL on each year's BS
+     "fixed_assets_cy": n, "fixed_assets_py": n,    // Net fixed-asset (WDV) TOTAL on each year's BS
+     "gross_profit_cy": n, "gross_profit_py": n     // printed Gross Profit (Trading Account)
   }
 }
 
@@ -104,6 +108,9 @@ Rules for the JSON:
       withdrawals  = drawings (subtracted)
       less         = ANY OTHER debit to capital (subtracted) — e.g. LIC premium,
                      personal income tax, personal insurance
+  * CLOSING BALANCE: put each capital account's PRINTED closing balance ("To Closing
+    Balance" figure) in closing_cy / closing_py - NOT as a movement line. The engine uses
+    it to verify the account and re-derive the opening if it was mis-read.
   * Exactly one line must be kind "profit" (proprietor) / one per partner (firm),
     and its value must equal the Net Profit / share printed in the source.
 - Only include a note if it has a balance/disclosure in CY or PY (Nil-in-both → omit).
