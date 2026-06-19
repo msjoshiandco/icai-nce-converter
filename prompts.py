@@ -267,6 +267,11 @@ is the default; a matching LEDGER rule overrides the group for that ledger only:
   netted figure ALREADY CONTAINS every GST ledger (including RCM Payable) - do NOT also
   list any of those same ledgers (e.g. RCM Payable) as a separate line; that double-counts.
   TDS Payable and TCS are shown as their own separate other_cl lines.
+- LIST EXPENSE LEDGERS INDIVIDUALLY: for Direct and Indirect Expenses, output each
+  ledger as its own item (verbatim label + amount) - do NOT collapse them into a single
+  "Other expenses" lump. The engine classifies each ledger to its NCE head (Employee
+  Benefits / Finance Costs / Depreciation / Other) deterministically, so it needs them
+  itemised. The printed Direct/Indirect totals remain the controls they must sum to.
 - COMPLETENESS (do NOT drop a comparative figure): include EVERY line that has a balance
   in EITHER year. NEVER omit a line just because it is nil in the current year - its
   previous-year (PY) figure must still appear (e.g. a loan fully repaid during CY still

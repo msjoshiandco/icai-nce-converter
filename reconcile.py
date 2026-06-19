@@ -10,6 +10,7 @@ Also provides deterministic auto-fixes for the two most common extraction slips
 (inventory double-count, bank-interest mis-placed in the capital interest column).
 """
 from __future__ import annotations
+import re
 from typing import List, Dict
 from models import Payload
 
@@ -380,12 +381,64 @@ def _anchor_inventories(p: Payload) -> List[str]:
             f"removed any double-count / mis-inclusion of stock"]
 
 
+def _expense_head(label: str) -> str:
+    """Deterministically map a P&L expense ledger to its NCE head, by rulebook keywords.
+    Order matters: depreciation, then interest-on-LATE-payment (-> other), then finance,
+    then employee benefits, else other expenses."""
+    t = " " + (label or "").lower() + " "
+    def has(words): return any(re.search(r"\b" + re.escape(w) + r"\b", t) for w in words)
+    if has(["depreciation", "deprecation", "amortization", "amortisation"]):
+        return "depreciation"
+    if ("late payment" in t) or ("late fee" in t) or ("penalty" in t) or ("penal " in t):
+        return "other_expenses"           # interest on late payment of TDS/GST/IT -> Other
+    if has(["interest", "bank charge", "bank charges", "finance cost", "finance costs",
+            "loan processing", "processing fee", "commitment charge"]):
+        return "finance_costs"
+    if has(["salary", "wages", "wage", "bonus", "staff welfare", "staff medical",
+            "provident fund", "pf", "epf", "esic", "gratuity", "labour", "labor",
+            "remuneration", "stipend", "ex gratia"]):
+        return "employee_benefits"
+    return "other_expenses"
+
+
+def _classify_expenses(p: Payload) -> List[str]:
+    """Re-bucket every expense ledger into Employee Benefits / Finance Costs /
+    Depreciation / Other Expenses by the deterministic rulebook keywords - so the P&L
+    classification is identical every run, independent of how the model first split them.
+    Cost of materials, revenue and other income are left untouched (anchored elsewhere)."""
+    from models import Note
+    keys = ["employee_benefits", "finance_costs", "depreciation", "other_expenses"]
+    pool = []
+    for k in keys:
+        n = p.note(k)
+        if n and n.items:
+            pool += list(n.items)
+            n.items = []
+    if not pool:
+        return []
+    buckets = {k: [] for k in keys}
+    for it in pool:
+        buckets[_expense_head(it.label)].append(it)
+    titles = {"employee_benefits": "Employee Benefits Expense", "finance_costs": "Finance Costs",
+              "depreciation": "Depreciation and Amortisation Expense", "other_expenses": "Other Expenses"}
+    moved = 0
+    for k in keys:
+        n = p.note(k)
+        if n is None:
+            n = Note(key=k, title=titles[k]); p.notes.append(n)
+        n.items = buckets[k]
+        moved += len(buckets[k])
+    return [f"Expenses re-classified deterministically by rulebook into Employee Benefits / "
+            f"Finance Costs / Depreciation / Other ({moved} ledgers)"]
+
+
 def auto_fix(p: Payload) -> List[str]:
     """Apply safe, rule-based corrections. Returns a list of fixes applied."""
     fixes = []
     fixes += _clean_capital_lines(p)
     fixes += _anchor_capital(p)
     fixes += _anchor_inventories(p)
+    fixes += _classify_expenses(p)
     fixes += _rebuild_from_controls(p)
     c = p.controls
     # (a) Inventory netting: if opening/closing/purchases known, force the
