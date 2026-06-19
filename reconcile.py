@@ -356,11 +356,36 @@ def _anchor_capital(p: Payload) -> List[str]:
     return fixes
 
 
+def _anchor_inventories(p: Payload) -> List[str]:
+    """Inventories must equal the printed Closing Stock for each year. If the extracted
+    inventories note does not tie to the closing-stock control (e.g. stock got
+    double-counted, or opening stock was wrongly included as an asset), reset it to a
+    single Closing Stock line equal to the control. Deterministic; only acts when wrong."""
+    from models import Note, LineItem
+    c = p.controls
+    cs_cy = getattr(c, "closing_stock_cy") or 0.0
+    cs_py = getattr(c, "closing_stock_py") or 0.0
+    if cs_cy <= 0 and cs_py <= 0:
+        return []
+    cur_cy = _note_total(p, "inventories", "cy")
+    cur_py = _note_total(p, "inventories", "py")
+    if abs(cur_cy - cs_cy) <= EPS and abs(cur_py - cs_py) <= EPS:
+        return []                      # already correct - leave the breakup as-is
+    n = p.note("inventories")
+    if n is None:
+        n = Note(key="inventories", title="Inventories"); p.notes.append(n)
+    n.items = [LineItem(label="Closing Stock (at cost or NRV, whichever is lower)",
+                        cy=round(cs_cy, 2), py=round(cs_py, 2))]
+    return [f"Inventories anchored to printed Closing Stock (CY {cs_cy:,.0f}, PY {cs_py:,.0f}); "
+            f"removed any double-count / mis-inclusion of stock"]
+
+
 def auto_fix(p: Payload) -> List[str]:
     """Apply safe, rule-based corrections. Returns a list of fixes applied."""
     fixes = []
     fixes += _clean_capital_lines(p)
     fixes += _anchor_capital(p)
+    fixes += _anchor_inventories(p)
     fixes += _rebuild_from_controls(p)
     c = p.controls
     # (a) Inventory netting: if opening/closing/purchases known, force the
