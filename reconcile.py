@@ -452,12 +452,67 @@ def _classify_expenses(p: Payload) -> List[str]:
             f"Finance Costs / Depreciation / Other ({moved} ledgers)"]
 
 
+_GROUP_ANCHOR_KEYS = [
+    # liabilities / equity groups
+    "reserves", "lt_borrowings", "st_borrowings", "trade_payables", "other_cl",
+    "st_provisions", "lt_provisions", "other_lt_liab", "dtl",
+    # asset groups
+    "trade_receivables", "cash_bank", "st_loans_adv", "other_ca",
+    "nc_investments", "current_investments", "lt_loans_adv", "other_nca", "dta",
+]
+
+
+def _anchor_groups(p: Payload) -> List[str]:
+    """Tie every Balance-Sheet group note to its PRINTED FACE TOTAL (from group_totals).
+    A single-line group is set to the total; a multi-line group keeps its breakup and
+    gets a clearly-labelled balancing line for any difference (dropped line, double-count
+    or misread) so the Balance Sheet always tallies and the gap is surfaced for review.
+    Deterministic; only acts when a group does not already tie to its printed total."""
+    from models import Note, LineItem
+    gt = {g.key: g for g in (p.controls.group_totals or []) if getattr(g, "key", "")}
+    if not gt:
+        return []
+    fixes = []
+    for key in _GROUP_ANCHOR_KEYS:
+        g = gt.get(key)
+        if not g:
+            continue
+        t_cy = getattr(g, "cy", 0.0) or 0.0
+        t_py = getattr(g, "py", 0.0) or 0.0
+        if t_cy <= 0 and t_py <= 0:
+            continue
+        n = p.note(key)
+        cur_cy = _note_total(p, key, "cy") if n else 0.0
+        cur_py = _note_total(p, key, "py") if n else 0.0
+        d_cy = round(t_cy - cur_cy, 2) if t_cy > 0 else 0.0
+        d_py = round(t_py - cur_py, 2) if t_py > 0 else 0.0
+        if abs(d_cy) <= EPS and abs(d_py) <= EPS:
+            continue                         # already ties to printed total
+        if n is None:
+            n = Note(key=key, title=key.replace("_", " ").title()); p.notes.append(n)
+        if len(n.items) <= 1:
+            # single-line group: set it straight to the printed total
+            label = n.items[0].label if n.items else "As per source"
+            n.items = [LineItem(label=label,
+                                cy=round(t_cy, 2) if t_cy > 0 else (n.items[0].cy if n.items else 0.0),
+                                py=round(t_py, 2) if t_py > 0 else (n.items[0].py if n.items else 0.0))]
+            fixes.append(f"{key}: set to printed group total (CY {t_cy:,.0f}, PY {t_py:,.0f})")
+        else:
+            # multi-line group: preserve breakup, add a balancing line for the difference
+            n.items.append(LineItem(label="Balancing difference vs printed group total (please verify)",
+                                    cy=d_cy if abs(d_cy) > EPS else 0.0,
+                                    py=d_py if abs(d_py) > EPS else 0.0))
+            fixes.append(f"{key}: balanced to printed group total (CY diff {d_cy:,.0f}, PY diff {d_py:,.0f}) - flagged")
+    return fixes
+
+
 def auto_fix(p: Payload) -> List[str]:
     """Apply safe, rule-based corrections. Returns a list of fixes applied."""
     fixes = []
     fixes += _clean_capital_lines(p)
     fixes += _anchor_capital(p)
     fixes += _anchor_inventories(p)
+    fixes += _anchor_groups(p)
     fixes += _classify_expenses(p)
     fixes += _rebuild_from_controls(p)
     c = p.controls

@@ -255,6 +255,15 @@ class PLMeta:
 
 
 @dataclass
+class GroupTotal:
+    """Printed FACE TOTAL of a Balance-Sheet group, keyed by NCE note key. Lets the
+    engine tie each group's note to its source total (deterministic group anchor)."""
+    key: str = ""
+    cy: float = 0.0
+    py: float = 0.0
+
+
+@dataclass
 class Controls:
     """Source control totals read directly from the printed source statements.
     Used by the reconciliation engine to assert the converted output matches source."""
@@ -289,6 +298,7 @@ class Controls:
     fixed_assets_py: float = 0.0
     gross_profit_cy: float = 0.0
     gross_profit_py: float = 0.0
+    group_totals: List["GroupTotal"] = field(default_factory=list)
 
 
 @dataclass

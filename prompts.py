@@ -67,7 +67,16 @@ Return ONE JSON object, no prose, with this shape:
      "indirect_exp_cy": n, "indirect_exp_py": n,    // Indirect Expenses total (P&L a/c)
      "depreciation_cy": n, "depreciation_py": n,    // Depreciation charged in the P&L (0 if none)
      "fixed_assets_cy": n, "fixed_assets_py": n,    // Net fixed-asset (WDV) TOTAL on each year's BS
-     "gross_profit_cy": n, "gross_profit_py": n     // printed Gross Profit (Trading Account)
+     "gross_profit_cy": n, "gross_profit_py": n,    // printed Gross Profit (Trading Account)
+     // printed FACE TOTAL of each Balance-Sheet GROUP, keyed by its NCE note key. The
+     // engine ties each group's note to this total (so a dropped/duplicated/misread
+     // ledger inside a group is auto-corrected and flagged).
+     "group_totals": [ {"key": "lt_borrowings", "cy": n, "py": n},
+        {"key": "st_borrowings", "cy": n, "py": n}, {"key": "trade_payables", "cy": n, "py": n},
+        {"key": "other_cl", "cy": n, "py": n}, {"key": "st_provisions", "cy": n, "py": n},
+        {"key": "reserves", "cy": n, "py": n}, {"key": "trade_receivables", "cy": n, "py": n},
+        {"key": "cash_bank", "cy": n, "py": n}, {"key": "st_loans_adv", "cy": n, "py": n},
+        {"key": "other_ca", "cy": n, "py": n}, {"key": "nc_investments", "cy": n, "py": n} ]
   }
 }
 
@@ -228,6 +237,14 @@ CRITICAL COMPUTATION RULES (these make the Balance Sheet tally — get them righ
     year's Balance Sheet (used to reconcile the depreciation/additions movement; a
     separate asset-wise depreciation chart is NOT required, though if one is supplied
     you may use Case "B" instead).
+  * GROUP TOTALS (group_totals): for EVERY Balance-Sheet group, give its printed face
+    total keyed by NCE note key - trade_payables = Sundry Creditors total; lt_borrowings =
+    Secured + Unsecured Loans total; st_borrowings = Bank OD/CC; other_cl = Duties & Taxes +
+    Salary/Wages payable (net GST + TDS payable, per rulebook); st_provisions = Provisions;
+    trade_receivables = Sundry Debtors; cash_bank = Cash + all Bank balances; st_loans_adv =
+    Loans & Advances + deposits + statutory; other_ca = Misc Exp / Accumulated Loss;
+    reserves; nc_investments. The engine ties each group's note to its total. Omit a group
+    that is genuinely nil in both years.
   READ THESE AS THE PRINTED BOLD SUB-TOTALS — do NOT re-sum the dozens of inner GST /
   ledger sub-lines. The engine BUILDS the Profit & Loss and the fixed-asset block from
   these control totals, so getting them right guarantees the statement reconciles even
