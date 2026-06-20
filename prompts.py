@@ -239,8 +239,8 @@ CRITICAL COMPUTATION RULES (these make the Balance Sheet tally — get them righ
     you may use Case "B" instead).
   * GROUP TOTALS (group_totals): for EVERY Balance-Sheet group, give its printed face
     total keyed by NCE note key - trade_payables = Sundry Creditors total; lt_borrowings =
-    Secured + Unsecured Loans total; st_borrowings = Bank OD/CC; other_cl = Duties & Taxes +
-    Salary/Wages payable (net GST + TDS payable, per rulebook); st_provisions = Provisions;
+    Secured + Unsecured Loans total; st_borrowings = Bank OD/CC; other_cl = Duties & Taxes total +
+    Salary/Wages payable + TDS Payable + TCS; st_provisions = Provisions;
     trade_receivables = Sundry Debtors; cash_bank = Cash + all Bank balances; st_loans_adv =
     Loans & Advances + deposits + statutory; other_ca = Misc Exp / Accumulated Loss;
     reserves; nc_investments. The engine ties each group's note to its total. Omit a group
@@ -285,12 +285,15 @@ is the default; a matching LEDGER rule overrides the group for that ledger only:
   of TDS/GST/Income-tax -> other_expenses; any other indirect expense -> other_expenses;
   Bank OD/CC/Cash Credit ledgers -> st_borrowings; TDS/TCS receivable, Advance tax, GST
   input/ITC, income-tax refund -> st_loans_adv.
-- DUTIES & TAXES group: net all GST-related ledgers (CGST/SGST/IGST incl. reconciliation,
-  unavailed, AND RCM Payable, EXCLUDING TDS Payable). If the net is a DEBIT, show it under
-  st_loans_adv as a single line "GST Receivable"; if CREDIT, under other_cl. The single
-  netted figure ALREADY CONTAINS every GST ledger (including RCM Payable) - do NOT also
-  list any of those same ledgers (e.g. RCM Payable) as a separate line; that double-counts.
-  TDS Payable and TCS are shown as their own separate other_cl lines.
+- DUTIES & TAXES group: take its PRINTED GROUP TOTAL exactly as shown and place it under
+  Other Current Liabilities (other_cl) as a single line "Duties & Taxes". Do NOT segregate
+  GST debit/credit balances and do NOT carve out a separate "GST Receivable" - the net group
+  total stands as printed (if it is a net debit it simply shows as a negative there; any
+  reclassification to a GST receivable is handled later at output level, NOT here). This
+  keeps Duties & Taxes a clean one-group-to-one-head mapping that always reconciles.
+- TDS Payable and TCS are CURRENT LIABILITIES (not provisions) -> other_cl, each as its own
+  line. Short-term Provisions (st_provisions) holds only true provisions (e.g. Professional
+  Tax, Provident Fund payable, provision for tax).
 - LIST EXPENSE LEDGERS INDIVIDUALLY: for Direct and Indirect Expenses, output each
   ledger as its own item (verbatim label + amount) - do NOT collapse them into a single
   "Other expenses" lump. The engine classifies each ledger to its NCE head (Employee
