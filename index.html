@@ -142,6 +142,28 @@ footer{background:#0f172a;color:#cbd5e1;margin-top:34px;}
 .tip{background:#eef7f8;border:1px solid #cfe6e9;border-left:4px solid var(--teal);border-radius:10px;
   padding:11px 16px;font-size:13.5px;color:#1d5a63;margin:0 0 16px;}
 .tip b{color:#0e6a73;}
+
+.hero2{max-width:1120px;margin:18px auto 0;padding:0 18px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.hero2 .ht{font-size:21px;font-weight:600;color:var(--heading);letter-spacing:-.01em;}
+.hero2 .hs{font-size:13px;color:var(--muted);margin-top:2px;}
+.stepper{display:flex;gap:8px;flex-wrap:wrap;}
+.step{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);background:#fff;border:1px solid var(--line);padding:6px 13px;border-radius:999px;font-weight:500;}
+.step .sn{width:18px;height:18px;border-radius:50%;background:#cbd5e1;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;}
+.step.on{color:var(--teal2);border-color:var(--teal);background:#eafaf6;}
+.step.on .sn,.step.done .sn{background:var(--teal);}
+.studio{max-width:1120px;margin:16px auto;padding:0 18px 64px;}
+.sgrid{display:grid;grid-template-columns:1.55fr 1fr;gap:20px;align-items:start;}
+.col-right{position:sticky;top:16px;}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 10px 24px rgba(15,23,42,.06);overflow:hidden;}
+.panel .ph{background:var(--band);color:#fff;padding:13px 18px;font-weight:600;font-size:14px;letter-spacing:.2px;}
+.panel .pb{padding:18px;}
+.psum{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--line);}
+.psum:last-of-type{border:none;}
+.psum b{color:var(--heading);font-weight:500;}
+.sectitle{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.5px;text-transform:uppercase;display:flex;align-items:center;gap:8px;margin:0 0 12px;}
+.sectitle .sb{width:18px;height:18px;border-radius:50%;background:var(--teal2);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;}
+.draftnote{font-size:12px;color:var(--muted);line-height:1.55;margin:12px 0 0;}
+@media(max-width:880px){.sgrid{grid-template-columns:1fr;}.col-right{position:static;}}
 </style>
 </head>
 <body>
@@ -165,111 +187,111 @@ footer{background:#0f172a;color:#cbd5e1;margin-top:34px;}
   <p>T-Format to Schedule III — Fully Automated</p>
 </div>
 
-<main>
-  <div class="card accent">
-    <div class="card-body">
-      <div class="contact-row">
-        <div class="l">
-          <p style="margin:0 0 6px;font-weight:700;color:var(--heading)" class="hd">Need help or access?</p>
-          <p class="sub" style="margin:0">Upload your two-year T-format statements and convert them to the ICAI NCE format in seconds. For an access code or assistance, contact us:</p>
+<main class="studio">
+  <div class="hero2" style="margin-top:0;padding:0 0 4px">
+    <div><div class="ht">ICAI NCE Financial Statement Converter</div><div class="hs">T-format to Schedule III — fully automated</div></div>
+    <div class="stepper">
+      <span class="step done" id="step1"><span class="sn">1</span>Entity</span>
+      <span class="step" id="step2"><span class="sn">2</span>Upload</span>
+      <span class="step" id="step3"><span class="sn">3</span>Generate</span>
+    </div>
+  </div>
+
+  <div class="sgrid" style="margin-top:14px">
+    <div class="col-left">
+
+      <div class="card"><div class="card-body">
+        <div class="sectitle"><span class="sb">1</span>Entity type</div>
+        <div class="choices">
+          <div class="choice prop sel" id="ch-prop" onclick="pickC('proprietorship');refreshUI()"><div class="ic">&#127978;</div><h3>Proprietorship</h3><small>Individual / Sole Proprietor</small></div>
+          <div class="choice part" id="ch-part" onclick="pickC('partnership');refreshUI()"><div class="ic">&#129309;</div><h3>Partnership</h3><small>Partnership Firm</small></div>
         </div>
-        <div class="r">
-          <b>+91 96240 94390</b><br>
-          Email: <a href="mailto:connect@msjc.in">connect@msjc.in</a><br>
-          Website: <a href="https://msjc.in" target="_blank">msjc.in</a>
-        </div>
-      </div>
-    </div>
-  </div>
+      </div></div>
 
-  <div class="card">
-    <div class="card-head"><span class="pill">STEP 1</span> Constitution Type</div>
-    <div class="card-body">
-      <p class="sub">Select the type of entity before uploading files</p>
-      <div class="choices">
-        <div class="choice prop sel" id="ch-prop" onclick="pickC('proprietorship')"><div class="ic">&#127978;</div><h3>Proprietorship</h3><small>Individual / Sole Proprietor</small></div>
-        <div class="choice part" id="ch-part" onclick="pickC('partnership')"><div class="ic">&#129309;</div><h3>Partnership</h3><small>Partnership Firm</small></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card collap" id="clientCard">
-    <div class="collap-head" onclick="document.getElementById('clientCard').classList.toggle('open')">
-      <span><span class="pill">STEP 2</span> &nbsp;Client Details (Optional)</span><span class="chev">&#9662;</span>
-    </div>
-    <div class="collap-body">
-      <div class="grid3">
-        <div><label class="fl">Entity / Firm Name</label><input type="text" id="f-name" placeholder="e.g. Sharma Traders"></div>
-        <div><label class="fl">PAN</label><input type="text" id="f-pan" placeholder="XXXXX0000X"></div>
-        <div><label class="fl">GSTIN</label><input type="text" id="f-gstin" placeholder="OPTIONAL"></div>
-      </div>
-      <div class="grid2">
-        <div><label class="fl">Business Nature</label><select id="f-nature"><option value="">-- Select --</option><option>Trading</option><option>Manufacturing</option><option>Job-work</option><option>Services</option><option>Profession</option><option>Other</option></select></div>
-        <div><label class="fl">Business Description</label><textarea id="f-desc" placeholder="Brief description of business activity"></textarea></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-head"><span class="pill">STEP 3</span> Upload T-Format Statements</div>
-    <div class="card-body">
-      <div class="tip">&#128161; <b>Tip:</b> For the fastest and most accurate results, upload <b>Word .docx</b> files. PDF, Excel and image are also supported. <i>(Legacy .doc — the old binary format — isn’t supported; in Word use Save As &rarr; .docx.)</i></div>
-      <label class="single"><input type="checkbox" id="singleFile" onchange="toggleSingle()"> Both years are in a single file</label>
-      <div class="zones">
-        <div class="zone cy" id="zoneCY">
-          <div class="zh">Current Year (CY) File</div>
-          <div class="drop cy" id="dropCY">
-            <div class="cloud">&#9729;</div><b>Drop Current Year file here</b>
-            <small>Best: Word (.docx). Also accepts PDF, Excel, image.</small><br>
-            <button class="browse" onclick="document.getElementById('inCY').click()">Browse Files</button>
-            <div class="fname" id="nameCY"></div>
-            <input type="file" id="inCY" style="display:none" accept=".docx,.pdf,.xlsx,.xls,.png,.jpg,.jpeg" onchange="setName('CY')">
+      <div class="card"><div class="card-body">
+        <div class="sectitle"><span class="sb">2</span>Source statements</div>
+        <div class="tip">&#128161; <b>Tip:</b> For the fastest, most accurate results, upload <b>Word .docx</b> files. PDF, Excel and image are also supported. <i>(Legacy .doc isn’t supported; in Word use Save As &rarr; .docx.)</i></div>
+        <label class="single"><input type="checkbox" id="singleFile" onchange="toggleSingle();refreshUI()"> Both years are in a single file</label>
+        <div class="zones">
+          <div class="zone cy" id="zoneCY">
+            <div class="zh">Current Year (CY) File</div>
+            <div class="drop cy" id="dropCY">
+              <div class="cloud">&#9729;</div><b>Drop Current Year file here</b>
+              <small>Best: Word (.docx). Also PDF, Excel, image.</small><br>
+              <button class="browse" onclick="document.getElementById('inCY').click()">Browse Files</button>
+              <div class="fname" id="nameCY"></div>
+              <input type="file" id="inCY" style="display:none" accept=".docx,.pdf,.xlsx,.xls,.png,.jpg,.jpeg" onchange="setName('CY');refreshUI()">
+            </div>
+          </div>
+          <div class="zone py" id="zonePY">
+            <div class="zh">Previous Year (PY) File</div>
+            <div class="drop py" id="dropPY">
+              <div class="cloud">&#9729;</div><b>Drop Previous Year file here</b>
+              <small>Best: Word (.docx). Also PDF, Excel, image.</small><br>
+              <button class="browse" onclick="document.getElementById('inPY').click()">Browse Files</button>
+              <div class="fname" id="namePY"></div>
+              <input type="file" id="inPY" style="display:none" accept=".docx,.pdf,.xlsx,.xls,.png,.jpg,.jpeg" onchange="setName('PY');refreshUI()">
+            </div>
           </div>
         </div>
-        <div class="zone py" id="zonePY">
-          <div class="zh">Previous Year (PY) File</div>
-          <div class="drop py" id="dropPY">
-            <div class="cloud">&#9729;</div><b>Drop Previous Year file here</b>
-            <small>Best: Word (.docx). Also accepts PDF, Excel, image.</small><br>
-            <button class="browse" onclick="document.getElementById('inPY').click()">Browse Files</button>
-            <div class="fname" id="namePY"></div>
-            <input type="file" id="inPY" style="display:none" accept=".docx,.pdf,.xlsx,.xls,.png,.jpg,.jpeg" onchange="setName('PY')">
+      </div></div>
+
+      <div class="card collap" id="clientCard">
+        <div class="collap-head" onclick="document.getElementById('clientCard').classList.toggle('open')">
+          <span>Client details <span style="opacity:.8;font-weight:500">(optional)</span></span><span class="chev">&#9662;</span>
+        </div>
+        <div class="collap-body">
+          <div class="grid3">
+            <div><label class="fl">Entity / Firm Name</label><input type="text" id="f-name" placeholder="e.g. Sharma Traders"></div>
+            <div><label class="fl">PAN</label><input type="text" id="f-pan" placeholder="XXXXX0000X"></div>
+            <div><label class="fl">GSTIN</label><input type="text" id="f-gstin" placeholder="OPTIONAL"></div>
+          </div>
+          <div class="grid2">
+            <div><label class="fl">Business Nature</label><select id="f-nature"><option value="">-- Select --</option><option>Trading</option><option>Manufacturing</option><option>Job-work</option><option>Services</option><option>Profession</option><option>Other</option></select></div>
+            <div><label class="fl">Business Description</label><textarea id="f-desc" placeholder="Brief description of business activity"></textarea></div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <div class="card accent">
-    <div class="card-head">Access Code <span class="req">Required</span></div>
-    <div class="card-body">
-      <div class="codewrap">
-        <input type="text" id="accessCode" placeholder="Enter your access code" autocomplete="off">
-        <button class="btn-sm" onclick="verifyCode()">Verify</button>
-        <span id="verifyTag" class="verify-tag"></span>
+      <div class="card accent"><div class="card-body">
+        <div class="sectitle"><span class="sb">3</span>Access code &amp; display</div>
+        <div class="codewrap">
+          <input type="text" id="accessCode" placeholder="Enter your access code" autocomplete="off" oninput="refreshUI()">
+          <button class="btn-sm" onclick="verifyCode()">Verify</button>
+          <span id="verifyTag" class="verify-tag"></span>
+        </div>
+        <label class="remember"><input type="checkbox" id="remember" checked> Remember on this device</label>
+        <div class="codenote">An access code is required to generate the workbook. Don't have one? Contact us — +91 96240 94390 &middot; <a href="mailto:connect@msjc.in">connect@msjc.in</a>.</div>
+        <label class="fl" for="denom" style="margin-top:16px">Display figures in (denomination)</label>
+        <select id="denom" onchange="refreshUI()" style="max-width:340px">
+          <option value="actual">Actual — Rupees (absolute)</option>
+          <option value="thousands">Thousands — Rs. in '000 (display-only)</option>
+          <option value="lakhs">Lakhs — Rs. in lakhs (display-only)</option>
+        </select>
+        <div class="codenote" style="margin-top:8px">Scales the <b>display only</b> — the cell always keeps the absolute figure.</div>
+      </div></div>
+
+    </div>
+
+    <div class="col-right">
+      <div class="panel">
+        <div class="ph">Conversion</div>
+        <div class="pb">
+          <div class="psum"><span>Entity</span><b id="sum-entity">Proprietorship</b></div>
+          <div class="psum"><span>Files</span><b id="sum-files">None yet</b></div>
+          <div class="psum"><span>Display</span><b id="sum-denom">Actual</b></div>
+          <div class="convert-wrap" style="margin:16px 0 4px"><button class="convert" id="convertBtn" onclick="convert()">Convert &amp; Download Excel</button></div>
+          <p class="draftnote">Outputs are auto-generated drafts. Please review any figures flagged in the red “Review” tab before finalising or signing.</p>
+          <div id="status"></div>
+        </div>
       </div>
-      <label class="remember"><input type="checkbox" id="remember" checked> Remember on this device</label>
-      <div class="codenote">An access code is required to generate the workbook. Don't have one? Contact us — +91 96240 94390 &middot; <a href="mailto:connect@msjc.in">connect@msjc.in</a>.</div>
     </div>
   </div>
 
-  <div class="card"><div class="card-body" style="padding:16px 24px">
-    <label class="fl" for="denom">Display figures in (denomination)</label>
-    <select id="denom" style="max-width:320px">
-      <option value="actual">Actual — Rupees (absolute)</option>
-      <option value="thousands">Thousands — Rs. in '000 (display-only)</option>
-      <option value="lakhs">Lakhs — Rs. in lakhs (display-only)</option>
-    </select>
-    <div class="codenote" style="margin-top:8px">All options scale the <b>display only</b> — the cell always keeps the absolute figure. The "Amount in Rs." caption and the rounding note update to the chosen denomination.</div>
-  </div></div>
-
-  <div class="convert-wrap"><button class="convert" id="convertBtn" onclick="convert()">Convert to ICAI NCE Format — Download Excel</button></div>
-  <p style="text-align:center;font-size:12.5px;color:var(--muted);margin:10px auto 0;max-width:680px;line-height:1.6">Outputs are auto-generated drafts. Please review any figures flagged in the red “Review” tab before finalising or signing.</p>
-  <div id="status"></div>
   <div id="reconReport"></div>
 
-  <details class="review card" style="padding:16px 22px">
-    <summary>Advanced — correct figures manually (Optional)</summary>
+  <details class="review card" style="padding:16px 22px;margin-top:20px">
+    <summary>Advanced — correct figures manually (optional)</summary>
     <div style="padding-top:10px">
       <p class="sub">After a conversion, the structured data appears here. Edit it and regenerate if needed. You can also paste your own JSON and click Generate.</p>
       <textarea id="json"></textarea>
@@ -281,16 +303,14 @@ footer{background:#0f172a;color:#cbd5e1;margin-top:34px;}
     </div>
   </details>
 
-  <div class="card"><div class="card-body howto">
-    <p class="hd" style="font-weight:700;margin:0 0 8px;color:var(--heading)">How to use</p>
+  <div class="card" style="margin-top:18px"><div class="card-body howto">
+    <p class="hd" style="font-weight:600;margin:0 0 8px;color:var(--heading)">How to use</p>
     <ol style="margin:0;padding-left:20px">
-      <li>Select the constitution type (Proprietorship or Partnership).</li>
-      <li>Optionally fill in client details (entity name, PAN, GSTIN, etc.).</li>
-      <li>Prepare T-format financial statements in Excel (.xlsx), Word (.docx), or PDF (.pdf).</li>
-      <li>Upload files for Current Year and Previous Year (or tick "single file" if both years are in one file).</li>
-      <li>Enter your access code, then click "Convert" and download the auto-generated ICAI NCE format workbook.</li>
-      <li>Review the output, verify placeholders, and finalise.</li>
-      <li><i>(Optional) The "Advanced — correct figures manually" panel lets you review and edit the extracted figures before regenerating. Most users can skip it.</i></li>
+      <li>Pick the entity type — proprietorship or partnership.</li>
+      <li>Upload the current-year and previous-year statements (or tick “single file”).</li>
+      <li>Enter your access code, then click Convert &amp; Download.</li>
+      <li>Review any flagged figures in the red “Review” tab before finalising.</li>
+      <li><i>(Optional) Use the Advanced panel to edit extracted figures and regenerate.</i></li>
     </ol>
   </div></div>
 </main>
@@ -412,11 +432,24 @@ async function loadSample(which){
   var d=await(await fetch('/static/sample_'+(which==='firm'?'firm':'prop')+'.json')).json();
   document.getElementById('json').value=JSON.stringify(d,null,2);
   setStatus('Sample loaded into the Advanced panel. Enter your access code, then click Generate workbook from this JSON.','ok');}
+function refreshUI(){
+  try{
+    var cy=document.getElementById('inCY').files[0], py=document.getElementById('inPY').files[0];
+    var single=document.getElementById('singleFile').checked;
+    document.getElementById('step1').className='step done';
+    document.getElementById('step2').className='step '+(cy?'done':'on');
+    document.getElementById('step3').className='step '+(val('accessCode')?'on':'');
+    document.getElementById('sum-entity').textContent=(CONS==='partnership'?'Partnership':'Proprietorship');
+    document.getElementById('sum-files').textContent=!cy?'None yet':(single?'Single file':(py?'2 years':'1 (need PY)'));
+    var dn=document.getElementById('denom');document.getElementById('sum-denom').textContent=dn.options[dn.selectedIndex].text.split('\u2014')[0].trim();
+  }catch(e){}
+}
 ['CY','PY'].forEach(function(w){var z=document.getElementById('drop'+w);
-  z.addEventListener('dragover',function(e){e.preventDefault();z.style.borderColor='#0e7c86';});
+  z.addEventListener('dragover',function(e){e.preventDefault();z.style.borderColor='#0d9488';});
   z.addEventListener('dragleave',function(e){z.style.borderColor='#cfdae8';});
   z.addEventListener('drop',function(e){e.preventDefault();z.style.borderColor='#cfdae8';
-    var f=e.dataTransfer.files;if(f.length){document.getElementById('in'+w).files=f;setName(w);}});});
+    var f=e.dataTransfer.files;if(f.length){document.getElementById('in'+w).files=f;setName(w);refreshUI();}});});
+refreshUI();
 </script>
 </body>
 </html>
