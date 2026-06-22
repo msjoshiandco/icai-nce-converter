@@ -221,8 +221,8 @@ def _add_review_sheet(data: bytes, discrepancies) -> bytes:
     ws = wb.create_sheet("\u26A0 Review", 0)
     ws.sheet_properties.tabColor = "C0392B"
     F = "Calibri Light"
-    ws["A1"] = ("Items to verify - these figures do not yet tie exactly to the source. "
-                "Please check the flagged lines below and correct the figure on the relevant sheet.")
+    ws["A1"] = ("Auto-generated draft - items to verify. These figures do not yet tie exactly to "
+                "the source; please review the flagged lines below and correct them before finalising or signing.")
     ws["A1"].font = Font(name=F, size=12, bold=True, color="C0392B")
     ws["A1"].alignment = Alignment(wrap_text=True, vertical="top")
     ws.merge_cells("A1:E1"); ws.row_dimensions[1].height = 34
