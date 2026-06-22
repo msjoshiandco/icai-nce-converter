@@ -321,29 +321,33 @@ def _clean_capital_lines(p: Payload) -> List[str]:
 
 
 def _anchor_capital(p: Payload) -> List[str]:
-    """Tie each capital account to its PRINTED CLOSING BALANCE. The year's movements
-    (profit share, interest, introductions, drawings) are individually reliable; opening
-    is the balancing figure the model most often misreads (e.g. a 10x slip). So:
-      opening = printed closing - sum(movements)   [per partner, when closing is given]
-    Falls back to tying the FIRM total to the printed capital control (distributing the
-    correction across the openings that have no per-partner closing). Guarantees capital
-    ties to source and recovers correct openings even under non-uniform slips."""
+    """Tie capital to source. The printed CAPITAL TOTAL (capital_close control) is the
+    ultimate authority. Per-partner printed closing balances are used to re-derive each
+    opening ONLY when they are trustworthy - i.e. every holder has one AND they sum to the
+    printed capital total. If they do not (e.g. a 10x slip in the closings themselves), we
+    ignore them and re-derive ALL openings proportionally so the firm total ties to the
+    printed control. Opening is the balancing figure and the one most often mis-read."""
     c = p.controls
     holders = ([p.owner_capital] if p.owner_capital else []) + list(p.partners or [])
     if not holders:
         return []
     fixes = []
     for yr in ("cy", "py"):
-        anchored = 0
-        anchored_close = 0.0
-        free_opens = []          # opening lines of holders without a printed closing
-        free_move = 0.0
-        for h in holders:
-            closing = getattr(h, f"closing_{yr}", 0.0) or 0.0
-            opens = [l for l in h.resolved_lines() if l.kind == "opening"]
-            move = sum(l.signed(yr) for l in h.resolved_lines() if l.kind != "opening")
-            if closing > 0 and opens:
-                needed = round(closing - move, 2)        # opening that makes this account tie
+        target = getattr(c, f"capital_close_{yr}") or 0.0
+
+        closings = [getattr(h, f"closing_{yr}", 0.0) or 0.0 for h in holders]
+        all_have = all(cl > 0 for cl in closings)
+        # trust per-partner closings only if they tie to the printed capital total
+        trust = (target > 0 and all_have and abs(sum(closings) - target) <= EPS) \
+                or (target <= 0 and all_have)
+        if trust:
+            n = 0
+            for h, cl in zip(holders, closings):
+                opens = [l for l in h.resolved_lines() if l.kind == "opening"]
+                if not opens:
+                    continue
+                move = sum(l.signed(yr) for l in h.resolved_lines() if l.kind != "opening")
+                needed = round(cl - move, 2)
                 cur = sum((getattr(l, yr) or 0.0) for l in opens)
                 if abs(cur - needed) > EPS:
                     if abs(cur) > EPS:
@@ -352,28 +356,28 @@ def _anchor_capital(p: Payload) -> List[str]:
                             setattr(l, yr, round((getattr(l, yr) or 0.0) * sc, 2))
                     else:
                         setattr(opens[0], yr, needed)
-                    anchored += 1
-                anchored_close += closing
-            else:
-                free_opens += opens
-                free_move += move
-        if anchored:
-            fixes.append(f"{yr.upper()}: {anchored} capital account(s) anchored to their "
-                         f"printed closing balance")
-        # firm-total fallback: tie the overall capital to the printed control using the
-        # openings that were NOT individually anchored.
-        target = getattr(c, f"capital_close_{yr}") or 0.0
-        if target <= 0 or not free_opens:
+                    n += 1
+            if n:
+                fixes.append(f"{yr.upper()}: {n} capital account(s) anchored to their "
+                             f"printed closing balance")
             continue
-        needed_free = round(target - anchored_close - free_move, 2)
-        cur_free = sum((getattr(l, yr) or 0.0) for l in free_opens)
-        if abs(cur_free) < EPS or abs(cur_free - needed_free) <= EPS:
+
+        # closings absent or unreliable -> tie the FIRM total to the printed control
+        if target <= 0:
             continue
-        sc = needed_free / cur_free
-        for l in free_opens:
+        opens = [l for h in holders for l in h.resolved_lines() if l.kind == "opening"]
+        total_open = sum((getattr(l, yr) or 0.0) for l in opens)
+        total_move = sum(l.signed(yr) for h in holders for l in h.resolved_lines()
+                         if l.kind != "opening")
+        if abs(total_open) < EPS or not opens:
+            continue
+        if abs(round(total_open + total_move, 2) - target) <= EPS:
+            continue                       # already ties
+        sc = (target - total_move) / total_open
+        for l in opens:
             setattr(l, yr, round((getattr(l, yr) or 0.0) * sc, 2))
-        fixes.append(f"{yr.upper()}: capital total tied to printed capital {target:,.0f} "
-                     f"(factor {sc:.4g})")
+        fixes.append(f"{yr.upper()}: capital re-derived to tie to the printed capital "
+                     f"total {target:,.0f} (factor {sc:.4g}); per-partner closings ignored as unreliable")
     return fixes
 
 
