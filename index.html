@@ -164,6 +164,25 @@ footer{background:#0f172a;color:#cbd5e1;margin-top:34px;}
 .sectitle .sb{width:18px;height:18px;border-radius:50%;background:var(--teal2);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;}
 .draftnote{font-size:12px;color:var(--muted);line-height:1.55;margin:12px 0 0;}
 @media(max-width:880px){.sgrid{grid-template-columns:1fr;}.col-right{position:static;}}
+
+.flow{margin-top:14px}
+.fstep{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);padding:6px 0}
+.fstep .fi{width:20px;height:20px;border-radius:50%;border:2px solid var(--line);display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+.fstep.active{color:var(--heading);font-weight:500}
+.fstep.active .fi{border-color:var(--teal)}
+.fstep.done .fi{background:var(--teal);border-color:var(--teal)}
+.fspin{width:11px;height:11px;border:2px solid var(--line);border-top-color:var(--teal);border-radius:50%;animation:sp .8s linear infinite}
+.chk{display:block;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);margin-bottom:2px}
+.receipt{margin-top:14px;border-radius:12px;padding:14px;border:1px solid}
+.receipt.ok{background:#ecfdf5;border-color:#a7f3d0}
+.receipt.warn{background:#fff7ed;border-color:#fed7aa}
+.receipt h5{margin:0 0 8px;font-size:14px;font-weight:600}
+.receipt.ok h5{color:#047857}
+.receipt.warn h5{color:#b45309}
+.receipt .rrow{font-size:12.5px;color:var(--ink);display:flex;justify-content:space-between;padding:3px 0}
+.receipt .rrow b{font-weight:500;color:var(--heading)}
+.rbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;margin-top:11px;background:var(--teal2);color:#fff;border:none;border-radius:9px;padding:10px 14px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;width:100%}
+.rbtn:hover{filter:brightness(1.06)}
 </style>
 </head>
 <body>
@@ -282,6 +301,7 @@ footer{background:#0f172a;color:#cbd5e1;margin-top:34px;}
           <div class="psum"><span>Display</span><b id="sum-denom">Actual</b></div>
           <div class="convert-wrap" style="margin:16px 0 4px"><button class="convert" id="convertBtn" onclick="convert()">Convert &amp; Download Excel</button></div>
           <p class="draftnote">Outputs are auto-generated drafts. Please review any figures flagged in the red “Review” tab before finalising or signing.</p>
+          <div id="convflow"></div>
           <div id="status"></div>
         </div>
       </div>
@@ -399,7 +419,7 @@ async function convert(){
   var fd=new FormData();fd.append('constitution',CONS);fd.append('extra',clientExtra());fd.append('files',cy);
   if(!single && py)fd.append('files',py);
   document.getElementById('convertBtn').disabled=true;
-  setStatus('Reading your statements with Claude and building the workbook... this can take 30-60 seconds.','',true);
+  startProgress();setStatus('','');
   try{
     var r=await fetch('/api/extract',{method:'POST',headers:codeHeaders(),body:fd});
     if(!r.ok){throw new Error(await r.text());}
@@ -408,20 +428,17 @@ async function convert(){
     applyClient(data);
     document.getElementById('json').value=JSON.stringify(data,null,2);
     var hasIssues = !!(recon && recon.passed===false);
-    showRecon(recon, !hasIssues);
+    showRecon(hasIssues?recon:null, false);
     await buildAndDownload(data);
+    lastPayload=data;
     var u=resp.usage;
-    var msg = hasIssues
-      ? ('Draft workbook downloaded. '+((recon.discrepancies||[]).length)+' item(s) need your review — see the differences below and the red \u201CReview\u201D tab inside the Excel.')
-      : 'Done. Statements reconciled to source; workbook downloaded.';
+    finishProgress(); renderReceipt(data,recon,u); setStatus('','');
     if(u && !u.unlimited){
-      msg+=' \u2014 '+u.remaining+' of '+u.limit+' conversion(s) left on this code.';
       var tg=document.getElementById('verifyTag');
       if(tg){tg.textContent='\u2713 '+u.used+' of '+u.limit+' used'+(u.remaining===0?' \u00b7 limit reached':' \u00b7 '+u.remaining+' left');
         tg.style.color=(u.remaining===0?'#c0392b':'#1a7f48');}
     }
-    setStatus(msg, hasIssues ? '' : 'ok');
-  }catch(e){setStatus('Conversion failed: '+cleanErr(e.message),'err');}
+  }catch(e){stopProgress();setStatus('Conversion failed: '+cleanErr(e.message),'err');}
   document.getElementById('convertBtn').disabled=false;}
 async function generateFromJson(){
   if(!val('accessCode')){setStatus('Please enter your access code above.','err');return;}
@@ -432,6 +449,38 @@ async function loadSample(which){
   var d=await(await fetch('/static/sample_'+(which==='firm'?'firm':'prop')+'.json')).json();
   document.getElementById('json').value=JSON.stringify(d,null,2);
   setStatus('Sample loaded into the Advanced panel. Enter your access code, then click Generate workbook from this JSON.','ok');}
+var PROG=null, lastPayload=null;
+function _inr(x){return Number(x).toLocaleString("en-IN",{minimumFractionDigits:2});}
+function startProgress(){
+  var stages=["Reading your statements","Classifying & mapping (Schedule III)","Reconciling to source","Building the workbook"];
+  var c=document.getElementById("convflow"); if(!c)return;
+  c.innerHTML='<div class="flow">'+stages.map(function(t,i){return '<div class="fstep" id="fs'+i+'"><span class="fi"></span><span>'+t+'</span></div>';}).join('')+'</div>';
+  function setStep(k){for(var j=0;j<stages.length;j++){var el=document.getElementById("fs"+j);if(!el)continue;
+    el.className="fstep"+(j<k?" done":(j===k?" active":""));
+    el.querySelector(".fi").innerHTML = j<k?'<span class="chk"></span>':(j===k?'<span class="fspin"></span>':"");}}
+  PROG={i:0,stages:stages,setStep:setStep}; setStep(0);
+  PROG.timer=setInterval(function(){if(PROG && PROG.i<stages.length-1){PROG.i++;PROG.setStep(PROG.i);}},7000);
+}
+function finishProgress(){if(PROG){clearInterval(PROG.timer);
+  for(var j=0;j<PROG.stages.length;j++){var el=document.getElementById("fs"+j);if(el){el.className="fstep done";el.querySelector(".fi").innerHTML='<span class="chk"></span>';}}PROG=null;}}
+function stopProgress(){if(PROG){clearInterval(PROG.timer);PROG=null;}var c=document.getElementById("convflow");if(c)c.innerHTML="";}
+function renderReceipt(data,recon,usage){
+  var c=document.getElementById("convflow"); if(!c)return;
+  var ok=!(recon && recon.passed===false);
+  var ent=(data.entity&&data.entity.name)||"Entity";
+  var fy=(data.entity&&data.entity.cy_fy)||"";
+  var bs=(data.controls&&data.controls.bs_total_cy)||0;
+  var n=(recon&&recon.discrepancies)?recon.discrepancies.length:0;
+  var h='<div class="receipt '+(ok?"ok":"warn")+'">';
+  h+='<h5>'+(ok?"\u2713 Reconciled to source":"\u26A0 Draft ready \u2014 "+n+" item"+(n===1?"":"s")+" to review")+'</h5>';
+  h+='<div class="rrow"><span>Entity</span><b>'+ent+'</b></div>';
+  if(fy)h+='<div class="rrow"><span>Year</span><b>FY '+fy+'</b></div>';
+  if(bs)h+='<div class="rrow"><span>Balance Sheet</span><b>Rs. '+_inr(bs)+'</b></div>';
+  if(usage&&!usage.unlimited)h+='<div class="rrow"><span>Conversions left</span><b>'+usage.remaining+' of '+usage.limit+'</b></div>';
+  h+='<button class="rbtn" onclick="buildAndDownload(lastPayload)">Download Excel again</button>';
+  if(!ok)h+='<div style="font-size:12px;color:#b45309;margin-top:8px;line-height:1.5">Review the flagged items below, correct them in Advanced, then regenerate.</div>';
+  h+='</div>'; c.innerHTML=h;
+}
 function refreshUI(){
   try{
     var cy=document.getElementById('inCY').files[0], py=document.getElementById('inPY').files[0];
