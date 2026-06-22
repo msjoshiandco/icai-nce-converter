@@ -183,8 +183,6 @@ class Engine:
                 keep = True
             elif key == "ppe" and has_ppe:
                 keep = True
-            elif key == "st_provisions" and self.firm:
-                keep = True  # firm tax provision
             elif key in present:
                 keep = True
             if keep:
@@ -265,6 +263,8 @@ class Engine:
         renumbers every following note (and their references) automatically."""
         prev = None
         for key in self.retained:
+            if key not in self.numcell:
+                continue                       # note suppressed/absent -> not numbered
             sheet, col_letter, row = self.numcell[key]
             ws = self.wb[sheet]
             col = column_index_from_string(col_letter)
@@ -280,6 +280,8 @@ class Engine:
             prev = (sheet, col_letter, row)
 
     def _numref(self, key, local_sheet=None):
+        if key not in self.numcell:
+            return str(self.note_no.get(key, ""))   # safe fallback, never KeyError
         sheet, col_letter, row = self.numcell[key]
         ref = f"{col_letter}{row}"
         return ref if local_sheet == sheet else f"'{sheet}'!{ref}"
