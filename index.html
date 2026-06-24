@@ -83,7 +83,7 @@ textarea{min-height:46px;resize:vertical;}
 .zone{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;}
 .zone .zh{padding:11px 16px;font-weight:600;font-size:13.5px;letter-spacing:.2px;}
 .zone.cy .zh{background:#e6f5f0;color:#0f766e;}.zone.py .zh{background:#eef1f5;color:#475569;}
-.drop{margin:16px;border:2px dashed #dbe3ec;border-radius:11px;padding:26px 14px;text-align:center;transition:.15s;}
+.drop{margin:16px;border:2px dashed #dbe3ec;border-radius:11px;padding:26px 14px;text-align:center;transition:.15s;cursor:pointer;}
 .drop.cy .cloud{color:var(--cy);}.drop.py .cloud{color:var(--py);}
 .drop .cloud{font-size:36px;}
 .drop b{display:block;margin:10px 0 4px;font-size:16px;color:var(--heading);}
@@ -252,20 +252,20 @@ footer{background:#0f172a;color:#cbd5e1;margin-top:34px;}
         <div class="zones">
           <div class="zone cy" id="zoneCY">
             <div class="zh">Current Year (CY) File</div>
-            <div class="drop cy" id="dropCY">
+            <div class="drop cy" id="dropCY" onclick="document.getElementById('inCY').click()">
               <div class="cloud">&#9729;</div><b>Drop Current Year file here</b>
               <small>Best: Word (.docx). Also PDF, Excel, image.</small><br>
-              <button class="browse" onclick="document.getElementById('inCY').click()">Browse Files</button>
+              <button class="browse" onclick="event.stopPropagation();document.getElementById('inCY').click()">Browse Files</button>
               <div class="fname" id="nameCY"></div>
               <input type="file" id="inCY" style="display:none" accept=".docx,.pdf,.xlsx,.xls,.png,.jpg,.jpeg" onchange="setName('CY');refreshUI()">
             </div>
           </div>
           <div class="zone py" id="zonePY">
             <div class="zh">Previous Year (PY) File</div>
-            <div class="drop py" id="dropPY">
+            <div class="drop py" id="dropPY" onclick="document.getElementById('inPY').click()">
               <div class="cloud">&#9729;</div><b>Drop Previous Year file here</b>
               <small>Best: Word (.docx). Also PDF, Excel, image.</small><br>
-              <button class="browse" onclick="document.getElementById('inPY').click()">Browse Files</button>
+              <button class="browse" onclick="event.stopPropagation();document.getElementById('inPY').click()">Browse Files</button>
               <div class="fname" id="namePY"></div>
               <input type="file" id="inPY" style="display:none" accept=".docx,.pdf,.xlsx,.xls,.png,.jpg,.jpeg" onchange="setName('PY');refreshUI()">
             </div>
