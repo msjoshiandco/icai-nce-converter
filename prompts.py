@@ -363,8 +363,33 @@ CONSTITUTION: PARTNERSHIP FIRM.
 """
 
 
+LLP_INTRO = r"""
+CONSTITUTION: LIMITED LIABILITY PARTNERSHIP (LLP).
+Treat the LLP EXACTLY like a partnership firm for extraction: build partners[] with PSR and
+reproduce EACH partner's capital account verbatim in partner.lines (kinds: opening / introduced
+/ profit / interest / remuneration / add / withdrawals / less). Every partnership rule listed
+below applies identically (firm income tax, interest/remuneration treatment, appropriation,
+restatement, short-term provisions, always-retained notes).
+- CAPITAL PRESENTATION (IMPORTANT): the ICAI NCE LLP format splits Partners' Capital into a
+  Partners' Contribution Account (Note 3a) and a Partners' Current Account (Note 3b). Per firm
+  policy the Contribution Account is to be left BLANK (nil) for every partner; capture the
+  ENTIRE opening balance and ALL movements (profit share, interest, remuneration, capital
+  introduced, withdrawals) in partner.lines. The engine renders partner.lines as the Partners'
+  Current Account and prints a blank Contribution Account automatically. Do NOT allocate any
+  amount to a contribution head — if the user later wishes to split out a contribution, they do
+  so manually by reducing the current account and increasing the contribution account.
+"""
+LLP = LLP_INTRO + "\n" + "\n".join(PARTNERSHIP.splitlines()[2:])
+
+
 def system_prompt(constitution: str) -> str:
-    block = PROP if constitution == "proprietorship" else PARTNERSHIP
+    c = (constitution or "").lower()
+    if c == "proprietorship":
+        block = PROP
+    elif c == "llp":
+        block = LLP
+    else:
+        block = PARTNERSHIP
     return COMMON + "\n" + block + "\n" + JSON_CONTRACT
 
 

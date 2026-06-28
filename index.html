@@ -54,7 +54,7 @@ main{max-width:1120px;margin:20px auto;padding:0 18px 64px;}
 .contact-row .r b{color:var(--heading);}
 .card.accent{border-left:5px solid var(--amber);}
 
-.choices{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.choices{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
 .choice{border:2px solid var(--line);border-radius:14px;padding:26px;text-align:center;cursor:pointer;transition:.18s;background:#fafcff;position:relative;}
 .choice:hover{border-color:#c4d2e2;transform:translateY(-1px);}
 .choice.sel{border-color:var(--teal);background:#f0f8f8;box-shadow:0 0 0 3px rgba(14,124,134,.12);}
@@ -242,6 +242,7 @@ footer{background:#0f172a;color:#cbd5e1;margin-top:34px;}
         <div class="choices">
           <div class="choice prop sel" id="ch-prop" onclick="pickC('proprietorship');refreshUI()"><div class="ic">&#127978;</div><h3>Proprietorship</h3><small>Individual / Sole Proprietor</small></div>
           <div class="choice part" id="ch-part" onclick="pickC('partnership');refreshUI()"><div class="ic">&#129309;</div><h3>Partnership</h3><small>Partnership Firm</small></div>
+          <div class="choice llp" id="ch-llp" onclick="pickC('llp');refreshUI()"><div class="ic">&#127970;</div><h3>LLP</h3><small>Limited Liability Partnership</small></div>
         </div>
       </div></div>
 
@@ -344,7 +345,7 @@ footer{background:#0f172a;color:#cbd5e1;margin-top:34px;}
   <div class="card" style="margin-top:18px"><div class="card-body howto">
     <p class="hd" style="font-weight:600;margin:0 0 8px;color:var(--heading)">How to use</p>
     <ol style="margin:0;padding-left:20px">
-      <li>Pick the entity type — proprietorship or partnership.</li>
+      <li>Pick the entity type — proprietorship, partnership or LLP.</li>
       <li>Upload the current-year and previous-year statements (or tick “single file”).</li>
       <li>Enter your access code, then click Convert &amp; Download.</li>
       <li>Review any flagged figures in the red “Review” tab before finalising.</li>
@@ -376,7 +377,8 @@ var CONS='proprietorship';
 try{var sc=localStorage.getItem('nce_code');if(sc)document.getElementById('accessCode').value=sc;}catch(e){}
 function pickC(c){CONS=c;
   document.getElementById('ch-prop').classList.toggle('sel',c==='proprietorship');
-  document.getElementById('ch-part').classList.toggle('sel',c==='partnership');}
+  document.getElementById('ch-part').classList.toggle('sel',c==='partnership');
+  document.getElementById('ch-llp').classList.toggle('sel',c==='llp');}
 function toggleSingle(){var s=document.getElementById('singleFile').checked;
   document.getElementById('zonePY').classList.toggle('single-hide',s);
   document.getElementById('zoneCY').querySelector('.zh').textContent=s?'Single file (both years)':'Current Year (CY) File';}
@@ -509,7 +511,7 @@ function refreshUI(){
     document.getElementById('step1').className='step done';
     document.getElementById('step2').className='step '+(cy?'done':'on');
     document.getElementById('step3').className='step '+(val('accessCode')?'on':'');
-    document.getElementById('sum-entity').textContent=(CONS==='partnership'?'Partnership':'Proprietorship');
+    document.getElementById('sum-entity').textContent=(CONS==='partnership'?'Partnership':(CONS==='llp'?'LLP':'Proprietorship'));
     document.getElementById('sum-files').textContent=!cy?'None yet':(single?'Single file':(py?'2 years':'1 (need PY)'));
     var dn=document.getElementById('denom');document.getElementById('sum-denom').textContent=dn.options[dn.selectedIndex].text.split('\u2014')[0].trim();
   }catch(e){}

@@ -109,7 +109,8 @@ class Engine:
     def __init__(self, payload: Payload, denomination: str = "actual"):
         self.p = payload
         self.wb = Workbook()
-        self.firm = payload.entity.constitution == "partnership"
+        self.firm = payload.entity.constitution in ("partnership", "llp")
+        self.llp = payload.entity.constitution == "llp"
         self.anchor: Dict[str, str] = {}
         self.note_no: Dict[str, int] = {}
         self.retained: List[str] = []
@@ -365,18 +366,48 @@ class Engine:
     # -- Capital Account (rendered inline within Notes) ----------------------
     def _note_capital(self, ws, r, num):
         note = self.p.note("capital")
-        title = (note.title if note and note.title else
-                 ("Partners' Capital Account" if self.firm else "Owner's Capital Account"))
         self._note_number_cell(ws, r, "capital")
-        self.cell(ws, r, 2, title, bold=True)
-        r += 1
-        if self.firm:
-            r = self._cap_inline_partners(ws, r)
+        if self.llp:
+            self.cell(ws, r, 2, "Partners' Capital Account", bold=True)
+            r += 1
+            r = self._cap_inline_partners_llp(ws, r)
         else:
-            r = self._cap_inline_owner(ws, r)
+            title = (note.title if note and note.title else
+                     ("Partners' Capital Account" if self.firm else "Owner's Capital Account"))
+            self.cell(ws, r, 2, title, bold=True)
+            r += 1
+            if self.firm:
+                r = self._cap_inline_partners(ws, r)
+            else:
+                r = self._cap_inline_owner(ws, r)
         if note and note.footnotes:
             r = self._render_footnotes_numbered(ws, r, "capital", note.footnotes, 1)
         return r + 1
+
+    def _cap_inline_partners_llp(self, ws, r):
+        """LLP capital: a BLANK Partners' Contribution Account (Note 3a) for every
+        partner, then the Partners' Current Account (Note 3b) carrying the entire
+        balance and all movements (firm policy - nothing posted to contribution)."""
+        cap = self.note_no.get("capital", "")
+        self.cell(ws, r, 2, f"Note {cap}a — Partners' Contribution Account", bold=True, italic=True)
+        r += 1
+        r = self._table_header(ws, r)
+        for pt in self.p.partners:
+            psr = f"  ({pt.psr:g}%)" if pt.psr else ""
+            self.cell(ws, r, 2, f"{pt.name}{psr}")
+            self.cell(ws, r, 4, 0, num=True)
+            self.cell(ws, r, 6, 0, num=True)
+            r += 1
+        self.cell(ws, r, 2, "Total — Partners' Contribution", bold=True)
+        self.cell(ws, r, 4, 0, bold=True, num=True, top=True)
+        self.cell(ws, r, 6, 0, bold=True, num=True, top=True)
+        self.anchor["note_contribution_cy"] = f"Notes!D{r}"
+        self.anchor["note_contribution_py"] = f"Notes!F{r}"
+        r += 2
+        self.cell(ws, r, 2, f"Note {cap}b — Partners' Current Account", bold=True, italic=True)
+        r += 1
+        r = self._cap_inline_partners(ws, r, total_label="Total — Partners' Current Account")
+        return r
 
     def _cap_inline_owner(self, ws, r):
         oc = self.p.owner_capital or OwnerCapital(name=self.p.entity.name)
@@ -402,7 +433,7 @@ class Engine:
         self.anchor["note_capital_py"] = f"Notes!F{r}"
         return r + 1
 
-    def _cap_inline_partners(self, ws, r):
+    def _cap_inline_partners(self, ws, r, total_label="Total Partners' Capital"):
         cls_cy, cls_py = [], []
         for pt in self.p.partners:
             psr = f"  ({pt.psr:g}%)" if pt.psr else ""
@@ -424,7 +455,7 @@ class Engine:
             self.cell(ws, r, 6, self._closing_formula("F", add_rows, sub_rows), bold=True, num=True, top=True, val_hint=cpy)
             cls_cy.append(f"D{r}"); cls_py.append(f"F{r}")
             r += 2
-        self.cell(ws, r, 2, "Total Partners' Capital", bold=True)
+        self.cell(ws, r, 2, total_label, bold=True)
         self.cell(ws, r, 4, "=" + "+".join(cls_cy), bold=True, num=True, top=True, double_bottom=True)
         self.cell(ws, r, 6, "=" + "+".join(cls_py), bold=True, num=True, top=True, double_bottom=True)
         self.anchor["note_capital_cy"] = f"Notes!D{r}"
@@ -772,9 +803,9 @@ class Engine:
         self.cell(ws, 4, 6, self.p.entity.py_label, bold=True, center=True, fill=HEADER_FILL, top=True, bottom=True)
         r = 6
         self.cell(ws, r, 1, "I", bold=True)
-        self.cell(ws, r, 2, "OWNERS' FUNDS AND LIABILITIES", bold=True)
+        self.cell(ws, r, 2, ("PARTNERS' FUNDS AND LIABILITIES" if self.llp else "OWNERS' FUNDS AND LIABILITIES"), bold=True)
         r += 1
-        r, liab_rows = self._bs_block(ws, r, BS_LIABILITIES)
+        r, liab_rows = self._bs_block(ws, r, self._liab_plan())
         self.cell(ws, r, 2, "Total", bold=True)
         self.cell(ws, r, 4, "=" + ("+".join(f"D{x}" for x in liab_rows) or "0"), bold=True, num=True, top=True, double_bottom=True)
         self.cell(ws, r, 6, "=" + ("+".join(f"F{x}" for x in liab_rows) or "0"), bold=True, num=True, top=True, double_bottom=True)
@@ -791,6 +822,11 @@ class Engine:
         self.cell(ws, r, 2, "The accompanying notes are an integral part of the financial statements.", italic=True)
         self._signature_block(ws, r)
 
+    def _liab_plan(self):
+        if not self.llp:
+            return BS_LIABILITIES
+        return [("1  Partners' Funds", BS_LIABILITIES[0][1])] + BS_LIABILITIES[1:]
+
     def _bs_block(self, ws, r, plan):
         subtotal_rows = []
         for header, lines in plan:
@@ -804,6 +840,24 @@ class Engine:
             r += 1
             block_rows = []
             for lbl, key in lines:
+                if key == "capital" and self.llp:
+                    capref = self._numref("capital")
+                    ca_cy = self.anchor.get("note_capital_cy")
+                    ca_py = self.anchor.get("note_capital_py")
+                    self.cell(ws, r, 2, "(a)  Partners' Capital Account", bold=True); r += 1
+                    self.cell(ws, r, 2, "        (i)  Partners' Contribution")
+                    self.cell(ws, r, 3, f'={capref}&"a"', center=True)
+                    self.cell(ws, r, 4, 0, num=True)
+                    self.cell(ws, r, 6, 0, num=True)
+                    block_rows.append(r); r += 1
+                    self.cell(ws, r, 2, "        (ii)  Partners' Current Account")
+                    self.cell(ws, r, 3, f'={capref}&"b"', center=True)
+                    if ca_cy:
+                        self.cell(ws, r, 4, f"='{self._sheet(ca_cy)}'!{self._addr(ca_cy)}", num=True)
+                    if ca_py:
+                        self.cell(ws, r, 6, f"='{self._sheet(ca_py)}'!{self._addr(ca_py)}", num=True)
+                    block_rows.append(r); r += 1
+                    continue
                 cy_anchor = self.anchor.get(f"note_{key}_cy")
                 if cy_anchor is None:
                     continue

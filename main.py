@@ -173,8 +173,8 @@ def api_extract(constitution: str = Form(...),
                       files: List[UploadFile] = File(...),
                       x_access_code: str = Header(None)):
     code = require_code(x_access_code)
-    if constitution not in ("proprietorship", "partnership"):
-        raise HTTPException(400, "constitution must be 'proprietorship' or 'partnership'")
+    if constitution not in ("proprietorship", "partnership", "llp"):
+        raise HTTPException(400, "constitution must be 'proprietorship', 'partnership' or 'llp'")
     if not os.environ.get("ANTHROPIC_API_KEY"):
         raise HTTPException(503, "ANTHROPIC_API_KEY is not configured on the server. "
                                  "Use the manual JSON path, or set the key and redeploy.")

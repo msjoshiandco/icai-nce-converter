@@ -58,7 +58,7 @@ def pl_profit(p: Payload, yr: str) -> float:
 def capital_closing(p: Payload, yr: str) -> float:
     """Closing capital = signed sum of every capital-account line, exactly as
     presented (no merging). For a firm, the sum across all partners."""
-    if p.entity.constitution == "partnership":
+    if p.entity.constitution in ("partnership", "llp"):
         tot = 0.0
         for pt in p.partners:
             tot += sum(l.signed(yr) for l in pt.resolved_lines())
@@ -103,7 +103,7 @@ def reconcile(p: Payload) -> List[Dict]:
     """Return a list of discrepancies. Empty list = fully reconciled."""
     d: List[Dict] = []
     c = p.controls
-    firm = p.entity.constitution == "partnership"
+    firm = p.entity.constitution in ("partnership", "llp")
     for yr, ylabel in (("cy", p.entity.cy_label), ("py", p.entity.py_label)):
         at = assets_total(p, yr)
         lt = liabilities_total(p, yr)
@@ -218,7 +218,7 @@ def _rebuild_from_controls(p: Payload) -> List[str]:
         # 'profit' lines (these tie to the source capital, which is independently checked).
         np_ = getattr(c, f"net_profit_{yr}") or 0.0
         if np_ <= 0:
-            if p.entity.constitution == "partnership":
+            if p.entity.constitution in ("partnership", "llp"):
                 np_ = round(sum(pt.kind_total("profit", yr) for pt in p.partners), 2)
             elif p.owner_capital:
                 np_ = round(sum((getattr(l, yr) or 0.0) for l in p.owner_capital.resolved_lines()
